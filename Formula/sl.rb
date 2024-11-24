@@ -11,7 +11,6 @@ class Sl < Formula
   uses_from_macos "ncurses"
 
   conflicts_with "sapling", because: "both install `sl` binaries"
-  conflicts_with "sl", because: "both install `sl` binaries"
 
   def install
     system "cmake", "-S", ".", "-B", "build", *std_cmake_args
