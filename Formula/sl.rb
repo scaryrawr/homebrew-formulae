@@ -7,8 +7,8 @@ class Sl < Formula
   head "https://github.com/scaryrawr/sl.git", branch: "main"
 
   depends_on "cmake" => :build
-
-  uses_from_macos "ncurses"
+  depends_on "pkgconf" => :build
+  depends_on "ncurses"
 
   conflicts_with "sapling", because: "both install `sl` binaries"
 
