@@ -7,15 +7,22 @@ class Sl < Formula
   head "https://github.com/scaryrawr/sl.git", branch: "main"
 
   depends_on "cmake" => :build
-  depends_on "vcpkg" => :build
   depends_on "pkgconf" => :build
+  depends_on "vcpkg" => :build
+
   depends_on "ncurses"
 
   conflicts_with "sapling", because: "both install `sl` binaries"
 
   def install
     system "git", "clone", "https://github.com/microsoft/vcpkg"
-    system "cmake", "-S", ".", "-B", "build", "-D", "CMAKE_TOOLCHAIN_FILE=#{buildpath}/vcpkg/scripts/buildsystems/vcpkg.cmake", *std_cmake_args
+    system(
+      "cmake",
+      "-S", ".",
+      "-B", "build",
+      "-D", "CMAKE_TOOLCHAIN_FILE=#{buildpath}/vcpkg/scripts/buildsystems/vcpkg.cmake",
+      *std_cmake_args
+    )
     system "cmake", "--build", "build"
     system "cmake", "--install", "build"
   end
