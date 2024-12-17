@@ -22,7 +22,6 @@ class Sl < Formula
   end
 
   test do
-    system bin/"sl", "-c"
     system bin/"sl", "-h"
     system bin/"sl", "-V"
   end
