@@ -6,8 +6,8 @@ class Sl < Formula
   license "MIT"
   head "https://github.com/scaryrawr/sl.git", branch: "main"
 
-  depends_on "zig" => :build
   depends_on "rust" => :build
+  depends_on "zig" => :build
 
   conflicts_with "sapling", because: "both install `sl` binaries"
 
