@@ -19,8 +19,8 @@ jobs:
             eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
           fi
 
-          tar_url=`gh api repos/scaryrawr/sl/releases/latest --jq '.tarball_url'`
-          checksum=`curl -L ${tar_url} | sha256sum | awk '{print $1}'`
+          tar_url=$(gh api repos/scaryrawr/sl/releases/latest --jq '.tarball_url')
+          checksum=$(curl -L ${tar_url} | sha256sum | awk '{print $1}')
           file="Formula/sl.rb"
 
           # Check if the checksum is already present in the formula
@@ -38,7 +38,7 @@ jobs:
           sl -V
           sl
 
-          version=`gh api repos/scaryrawr/sl/releases/latest --jq .name`
+          version=$(gh api repos/scaryrawr/sl/releases/latest --jq .name)
           new_branch=${version}
           git checkout -b ${new_branch}
           git config user.name "github-actions[bot]"
