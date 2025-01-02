@@ -13,6 +13,4 @@ jobs:
       - name: Update new release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # shellcheck disable=code
-          "${GITHUB_WORKSPACE}/.github/scripts/update-formulae.sh"
+        run: ./.github/scripts/update-formulae.sh
