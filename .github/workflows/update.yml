@@ -35,10 +35,11 @@ on:
             sl -V
             sl
 
-            new_branch=update-formulae-$(date +'%Y%m%d%s')
-            git checkout -b $new_branch
+            version=`gh api repos/scaryrawr/sl/releases/latest --jq .name`
+            new_branch=${version}
+            git checkout -b ${new_branch}
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git config push.autoSetupRemote true
             git push
-            gh pr create -B rawhide --title 'Update formulae' --body 'Created by Github action' -a scaryrawr
+            gh pr create -B rawhide --title "Update to ${version}" --body 'Created by Github action' -a scaryrawr
