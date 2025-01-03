@@ -4,7 +4,8 @@ if [ -f /home/linuxbrew/.linuxbrew/bin/brew ]; then
   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 fi
 
-tar_url=$(gh api repos/scaryrawr/sl/releases/latest --jq '.tarball_url')
+version=$(gh api repos/scaryrawr/sl/releases/latest --jq '.name')
+tar_url="https://github.com/scaryrawr/sl/archive/refs/tags/${version}.tar.gz"
 checksum=$(curl -L "${tar_url}" | sha256sum | awk '{print $1}')
 file=${GITHUB_WORKSPACE}/Formula/sl.rb
 
@@ -23,7 +24,6 @@ brew install --build-from-source "${file}"
 sl -V
 sl -h
 
-version="$(gh api repos/scaryrawr/sl/releases/latest --jq .name)"
 new_branch="${version}"
 git checkout -b "${new_branch}"
 git add -u
