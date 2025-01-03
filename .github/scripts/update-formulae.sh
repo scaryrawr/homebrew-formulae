@@ -30,4 +30,4 @@ git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 git config push.autoSetupRemote true
 git push
-gh pr create -B rawhide --title "Update to ${version}" --body 'Created by Github action' -a scaryrawr
+gh pr create --title "Update to ${version}" --body 'Created by Github action' -a scaryrawr
