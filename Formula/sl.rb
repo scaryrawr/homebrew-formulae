@@ -1,13 +1,12 @@
 class Sl < Formula
   desc "Prints a steam locomotive if you type sl instead of ls"
   homepage "https://github.com/scaryrawr/sl"
-  url "https://github.com/scaryrawr/sl/archive/refs/tags/sl-6.13-1.tar.gz"
-  sha256 "1fe943c9d2d84dda2e5d92f9f20b1703843e9ccc8d972da3eac1a5a2bec60c07"
+  url "https://api.github.com/repos/scaryrawr/sl/tarball/sl-6.14-1"
+  sha256 "7cd42c0bf67fe381874284b15ecf9df8451d6e96422ffd8682e1cb6dccf5b87d"
   license "MIT"
   head "https://github.com/scaryrawr/sl.git", branch: "main"
 
   depends_on "rust" => :build
-  depends_on "zig" => :build
 
   conflicts_with "sapling", because: "both install `sl` binaries"
 
