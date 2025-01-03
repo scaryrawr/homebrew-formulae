@@ -11,7 +11,7 @@ file=${GITHUB_WORKSPACE}/Formula/sl.rb
 # Check if the checksum is already present in the formula
 if grep -q "${checksum}" "${file}"; then
   echo "Checksum already present in ${file}. No update needed."
-  exit 0;
+  exit 0
 fi
 
 # Update the formula
@@ -26,6 +26,8 @@ sl -h
 version="$(gh api repos/scaryrawr/sl/releases/latest --jq .name)"
 new_branch="${version}"
 git checkout -b "${new_branch}"
+git add -u
+git commit -m "Update to ${version}"
 git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 git config push.autoSetupRemote true
