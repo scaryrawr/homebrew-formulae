@@ -4,6 +4,8 @@ if [ -f /home/linuxbrew/.linuxbrew/bin/brew ]; then
   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 fi
 
+command -v sha256sum || brew install coreutils
+
 version=$(gh api repos/scaryrawr/sl/releases/latest --jq '.name')
 tar_url="https://github.com/scaryrawr/sl/archive/refs/tags/${version}.tar.gz"
 checksum=$(curl -L "${tar_url}" | sha256sum | awk '{print $1}')
