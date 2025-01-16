@@ -12,7 +12,7 @@ class Sl < Formula
 
   def install
     ENV["COMPLETIONS_DIR"] = "completions"
-    system "cargo", "install", *std_cargo_args
+    system "cargo", "install", "--root=#{prefix}", "--locked", "--path=./apps/sl"
 
     man1.install "completions/sl.1"
     bash_completion.install "completions/sl.bash"
