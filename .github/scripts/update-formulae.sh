@@ -4,7 +4,7 @@ if [ -f /home/linuxbrew/.linuxbrew/bin/brew ]; then
   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 fi
 
-command -v sha256sum || brew install coreutils
+command -v sha256sum &>/dev/null || brew install coreutils
 
 git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -12,8 +12,16 @@ git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 # Loop over all formula files in the Formula directory
 for file in "${GITHUB_WORKSPACE}"/Formula/*.rb; do
   repo_name=$(awk -F'/' '/homepage/ {printf("%s/%s\n", $(NF-1), substr($NF, 1, length($NF) - 1))}' "${file}")
+  echo "Repository name: ${repo_name}"
   version=$(gh api "repos/${repo_name}/releases/latest" --jq '.name')
+  if [ $? -ne 0 ]; then
+    echo "Failed to fetch the latest version for ${repo_name}. Skipping..."
+    continue
+  fi
+
+  echo "Latest version: ${version}"
   tar_url="https://github.com/${repo_name}/archive/refs/tags/${version}.tar.gz"
+  echo "Tarball URL: ${tar_url}"
   checksum=$(curl -L "${tar_url}" | sha256sum | cut -d' ' -f1)
 
   # Check if the checksum is already present in the formula
@@ -30,10 +38,10 @@ for file in "${GITHUB_WORKSPACE}"/Formula/*.rb; do
   brew install --build-from-source "${file}"
 
   new_branch="${repo_name}-${version}"
-  git checkout -b "${new_branch}"
-  git add -u
-  git commit -m "Update ${repo_name} to ${version}"
-  git config push.autoSetupRemote true
-  git push
-  gh pr create --title "Update formulae" --body 'Created by Github action' -a scaryrawr
+  # git checkout -b "${new_branch}"
+  # git add -u
+  # git commit -m "Update ${repo_name} to ${version}"
+  # git config push.autoSetupRemote true
+  # git push
+  # gh pr create --title "Update formulae" --body 'Created by Github action' -a scaryrawr
 done
