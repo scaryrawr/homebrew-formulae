@@ -7,6 +7,7 @@ class Zpiral < Formula
   head "https://github.com/scaryrawr/zpiral.git", branch: "main"
 
   depends_on "zig" => :build
+  depends_on :macos
 
   def install
     system "zig", "build", *std_zig_args
