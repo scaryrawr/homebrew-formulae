@@ -38,10 +38,11 @@ for file in "${GITHUB_WORKSPACE}"/Formula/*.rb; do
   brew install --build-from-source "${file}"
 
   new_branch="${repo_name}-${version}"
-  # git checkout -b "${new_branch}"
-  # git add -u
-  # git commit -m "Update ${repo_name} to ${version}"
-  # git config push.autoSetupRemote true
-  # git push
-  # gh pr create --title "Update formulae" --body 'Created by Github action' -a scaryrawr
+  git checkout -b "${new_branch}"
+  git add -u
+  git commit -m "Update ${repo_name} to ${version}"
+  git config push.autoSetupRemote true
+  git push
+  gh pr create --title "Update formulae" --body 'Created by Github action' -a scaryrawr
+  git checkout main
 done
