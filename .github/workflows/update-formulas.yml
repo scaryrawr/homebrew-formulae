@@ -1,0 +1,54 @@
+name: Update Formula Versions
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # Run daily at 6 AM UTC
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  update-formulas:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install requests
+
+      - name: Update sl formula
+        id: update-sl
+        run: |
+          python scripts/update-sl.py
+
+      - name: Update zpiral formula
+        id: update-zpiral
+        run: |
+          python scripts/update-zpiral.py
+
+      - name: Update opencode formula
+        id: update-opencode
+        run: |
+          python scripts/update-opencode.py
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update formula versions"
+          title: "chore: update formula versions"
+          body: |
+            Automated update of formula versions to latest releases.
+
+            This PR was automatically created by the update workflow.
+          branch: update-formulas
+          delete-branch: true
