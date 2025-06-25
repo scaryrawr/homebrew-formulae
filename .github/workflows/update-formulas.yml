@@ -78,4 +78,4 @@ jobs:
           This PR was automatically created by the update workflow." \
             --head update-formulas \
             --base main \
-            --assignee "@me"
+            --assignee "${{ github.repository_owner }}"
