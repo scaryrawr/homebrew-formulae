@@ -1,27 +1,39 @@
 #!/usr/bin/env python3
 
-import requests
+import subprocess
 import hashlib
 import re
 import sys
+import tempfile
+import os
 
 def get_sha256(url):
-    """Download file and calculate SHA256 checksum."""
-    response = requests.get(url, stream=True)
-    response.raise_for_status()
-    
-    sha256_hash = hashlib.sha256()
-    for chunk in response.iter_content(chunk_size=8192):
-        sha256_hash.update(chunk)
-    
-    return sha256_hash.hexdigest()
+    """Download file and calculate SHA256 checksum using curl."""
+    with tempfile.NamedTemporaryFile() as temp_file:
+        try:
+            subprocess.run(['curl', '-sL', url, '-o', temp_file.name], check=True)
+            
+            sha256_hash = hashlib.sha256()
+            with open(temp_file.name, 'rb') as f:
+                for chunk in iter(lambda: f.read(8192), b""):
+                    sha256_hash.update(chunk)
+            
+            return sha256_hash.hexdigest()
+        except subprocess.CalledProcessError as e:
+            raise Exception(f"Failed to download {url}: {e}")
 
 def get_latest_release(repo):
-    """Get the latest release tag from GitHub."""
-    url = f"https://api.github.com/repos/{repo}/releases/latest"
-    response = requests.get(url)
-    response.raise_for_status()
-    return response.json()["tag_name"]
+    """Get the latest release tag from GitHub using gh CLI."""
+    try:
+        result = subprocess.run(
+            ['gh', 'api', f'repos/{repo}/releases/latest', '--jq', '.tag_name'],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        return result.stdout.strip()
+    except subprocess.CalledProcessError as e:
+        raise Exception(f"Failed to get latest release for {repo}: {e}")
 
 def update_zpiral_formula():
     """Update the zpiral formula with latest release."""
