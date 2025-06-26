@@ -27,16 +27,22 @@ jobs:
 
       - name: Update sl formula
         id: update-sl
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python scripts/update-sl.py
 
       - name: Update zpiral formula
         id: update-zpiral
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python scripts/update-zpiral.py
 
       - name: Update opencode formula
         id: update-opencode
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python scripts/update-opencode.py
 
