@@ -1,27 +1,27 @@
 class Opencode < Formula
   desc "AI coding agent built for the terminal"
   homepage "https://github.com/scaryrawr/opencode"
-  version "0.3.78"
+  version "0.3.79"
 
   on_macos do
     if Hardware::CPU.intel?
-      url "https://github.com/scaryrawr/opencode/releases/download/r0.3.78/opencode-darwin-x64.tar.gz"
-      sha256 "3160aff8c068fd33a7f4099ee8c06aa148f66b8cd5883622f362e4468dd342d2"
+      url "https://github.com/scaryrawr/opencode/releases/download/r0.3.79/opencode-darwin-x64.tar.gz"
+      sha256 "2dd11bfe7befafad7c3ce4ad92b67c56f1870276ac7069b6d791d5186ee127f4"
     end
     if Hardware::CPU.arm?
-      url "https://github.com/scaryrawr/opencode/releases/download/r0.3.78/opencode-darwin-arm64.tar.gz"
-      sha256 "361186e00453bd95b350f9de582ea51a26c1eac5aab01f982596242a00f5364f"
+      url "https://github.com/scaryrawr/opencode/releases/download/r0.3.79/opencode-darwin-arm64.tar.gz"
+      sha256 "96cbefa207f1f25c609c347879b5b372593072cf6dde464be58012485ad6a546"
     end
   end
 
   on_linux do
     if Hardware::CPU.intel? && Hardware::CPU.is_64_bit?
-      url "https://github.com/scaryrawr/opencode/releases/download/r0.3.78/opencode-linux-x64.tar.gz"
-      sha256 "5350f428149e41ac285b84d468093f05da653fc5a6d0fe3a216de3d57967a042"
+      url "https://github.com/scaryrawr/opencode/releases/download/r0.3.79/opencode-linux-x64.tar.gz"
+      sha256 "d9f038b5922170dcb380edc7ceeec494911032120dde3b277d60d83e82ec1061"
     end
     if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
-      url "https://github.com/scaryrawr/opencode/releases/download/r0.3.78/opencode-linux-arm64.tar.gz"
-      sha256 "4277684e73d7ad2594f8480ad5a15dc424c5429092def0aedbc141d3658b5fb2"
+      url "https://github.com/scaryrawr/opencode/releases/download/r0.3.79/opencode-linux-arm64.tar.gz"
+      sha256 "e18b05625dc4f16066064ad23c677b2dddc2296048c62b3d6b5952b3b062feae"
     end
   end
 
