@@ -39,12 +39,7 @@ jobs:
         run: |
           python scripts/update-zpiral.py
 
-      - name: Update opencode formula
-        id: update-opencode
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          python scripts/update-opencode.py
+
 
       - name: Check for changes
         id: check-changes
