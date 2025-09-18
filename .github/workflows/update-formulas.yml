@@ -39,7 +39,12 @@ jobs:
         run: |
           python scripts/update-zpiral.py
 
-
+      - name: Update magus formula
+        id: update-magus
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python scripts/update-magus.py
 
       - name: Check for changes
         id: check-changes
