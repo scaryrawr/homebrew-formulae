@@ -1,7 +1,7 @@
 class Magus < Formula
   desc "AI coding agent built for the terminal"
   homepage "https://github.com/scaryrawr/magus"
-  version "v0.0.1"
+  version "0.0.1"
 
   on_macos do
     if Hardware::CPU.intel?

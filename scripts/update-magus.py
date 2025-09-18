@@ -56,7 +56,7 @@ def update_magus_formula():
             return False
 
         current_version = version_match.group(1)
-        latest_version = latest_tag.lstrip("r")  # Remove 'r' prefix if present
+        latest_version = latest_tag.lstrip("v")  # Remove 'v' prefix if present
 
         if current_version == latest_version:
             print(f"magus is already up to date at {latest_version}")
