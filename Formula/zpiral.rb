@@ -1,8 +1,8 @@
 class Zpiral < Formula
   desc "Configurable Multitouch Gestures for macOS"
   homepage "https://github.com/scaryrawr/zpiral"
-  url "https://github.com/scaryrawr/zpiral/archive/refs/tags/0.1.0.tar.gz"
-  sha256 "2103f3369f4ec6532f9b355ef1e47ee8e415348f4d581f41706481c003781c09"
+  url "https://github.com/scaryrawr/zpiral/archive/refs/tags/0.1.1.tar.gz"
+  sha256 "c91a081fc525c5a47b80ad44febad3e7656c6abd419e4d59f15c6b94e7341768"
   license "MIT"
   head "https://github.com/scaryrawr/zpiral.git", branch: "main"
 
