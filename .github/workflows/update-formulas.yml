@@ -46,6 +46,13 @@ jobs:
         run: |
           python scripts/update-magus.py
 
+      - name: Update codex formula
+        id: update-codex
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python scripts/update-codex.py
+
       - name: Check for changes
         id: check-changes
         run: |
