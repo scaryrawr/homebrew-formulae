@@ -2,8 +2,8 @@ class Codex < Formula
   desc "Lightweight coding agent that runs in your terminal"
   homepage "https://github.com/scaryrawr/codex"
   url "https://github.com/scaryrawr/codex/archive/9a9660afadb9cbea1e89e4e0740e632f1d40b440.tar.gz"
-  sha256 "313d6aa416ec713d62244d338ba457965a4cb880863c6b43a642e858a0ab482e"
   version "0.78.0-alpha.12+9a9660a"
+  sha256 "313d6aa416ec713d62244d338ba457965a4cb880863c6b43a642e858a0ab482e"
   license "MIT"
 
   depends_on "rust" => :build
