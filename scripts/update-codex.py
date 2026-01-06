@@ -52,7 +52,7 @@ def get_upstream_version(upstream_repo):
             check=True,
         )
         tags = result.stdout.strip().split("\n")
-        if tags:
+        if tags and tags[0]:
             # Return the first tag (latest) without the "rust-v" prefix
             return tags[0].replace("rust-v", "")
         return "0.0.0"
@@ -80,7 +80,7 @@ def update_codex_formula():
 
         # Extract current commit from URL
         url_match = re.search(
-            r'url "https://github\.com/scaryrawr/codex/archive/([a-f0-9]+)\.tar\.gz"',
+            r'url "https://github\.com/scaryrawr/codex/archive/([a-fA-F0-9]+)\.tar\.gz"',
             content,
         )
         if not url_match:
@@ -99,7 +99,7 @@ def update_codex_formula():
 
         # Update formula with new commit, version, and SHA256
         new_content = re.sub(
-            r'url "https://github\.com/scaryrawr/codex/archive/[a-f0-9]+\.tar\.gz"',
+            r'url "https://github\.com/scaryrawr/codex/archive/[a-fA-F0-9]+\.tar\.gz"',
             f'url "{new_url}"',
             content,
         )

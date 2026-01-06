@@ -15,7 +15,7 @@ class Codex < Formula
     # Build the codex CLI from the codex-rs workspace
     cd "codex-rs" do
       # Update the workspace version in Cargo.toml to match our version
-      inreplace "Cargo.toml", /^version = "0\.0\.0"$/, "version = \"#{cargo_version}\""
+      inreplace "Cargo.toml", /^version = ".*"$/, "version = \"#{cargo_version}\""
 
       system "cargo", "install", "--locked", "--root", prefix, "--path", "cli"
     end
