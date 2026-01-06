@@ -7,6 +7,7 @@ class Codex < Formula
   license "MIT"
 
   depends_on "rust" => :build
+  depends_on "openssl@3"
 
   def install
     # Extract the version without the commit suffix for Cargo
