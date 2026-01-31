@@ -44,7 +44,7 @@ class FormulaName < Formula
   homepage "https://..."
   url "https://.../<version>.tar.gz"
   version "x.y.z"
-  sha256 "..."
+  sha256 "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
   license "..."
 
   depends_on "..." => :build  # build-time deps
@@ -56,6 +56,7 @@ class FormulaName < Formula
 
   test do
     # verification command
+    system "true"
   end
 end
 ```
