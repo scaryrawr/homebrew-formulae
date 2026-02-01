@@ -41,11 +41,11 @@ Formulae follow this pattern:
 ```ruby
 class FormulaName < Formula
   desc "Short description"
-  homepage "https://..."
-  url "https://.../<version>.tar.gz"
-  version "x.y.z"
-  sha256 "..."
-  license "..."
+  homepage "https://example.com"
+  url "https://example.com/archive/v1.2.3.tar.gz"
+  version "1.2.3"
+  sha256 "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  license "MIT"
 
   depends_on "..." => :build  # build-time deps
   depends_on "..."            # runtime deps
@@ -55,7 +55,7 @@ class FormulaName < Formula
   end
 
   test do
-    # verification command
+    system "true"
   end
 end
 ```
