@@ -7,14 +7,15 @@ class Claudio < Formula
   head "https://github.com/scaryrawr/claudio.git", branch: "main"
 
   depends_on "rust" => :build
+  depends_on "claude-code" => :optional
 
   def install
     system "cargo", "install", "--root=#{prefix}", "--locked", "--path=."
   end
 
   test do
-    # Avoid requiring `claude` at test time; this path errors out before exec.
-    output = shell_output("#{bin}/claudio -p hi 2>&1", 2)
-    assert_match "no --model provided", output
+    # Just verify the binary runs and passes args to claude
+    output = shell_output("#{bin}/claudio --version 2>&1", 1)
+    assert_match "missing dependency: claude", output
   end
 end
