@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
+import subprocess
 import hashlib
 import re
-import subprocess
 import tempfile
 
 
@@ -41,43 +41,45 @@ def update_claudio_formula():
     repo = "scaryrawr/claudio"
     formula_path = "Formula/claudio.rb"
 
-    latest_tag = get_latest_release(repo)
+    try:
+        latest_tag = get_latest_release(repo)
 
-    with open(formula_path, "r") as f:
-        content = f.read()
+        with open(formula_path, "r") as f:
+            content = f.read()
 
-    url_match = re.search(
-        r'url "https://github\.com/scaryrawr/claudio/archive/refs/tags/([^"]+)\.tar\.gz"',
-        content,
-    )
-    if not url_match:
-        print("Could not find URL in claudio.rb")
+        url_match = re.search(
+            r'url "https://github\.com/scaryrawr/claudio/archive/refs/tags/([^"]+)\.tar\.gz"',
+            content,
+        )
+        if not url_match:
+            print("Could not find URL in claudio.rb")
+            return False
+
+        current_tag = url_match.group(1)
+        if current_tag == latest_tag:
+            print(f"claudio is already up to date at {latest_tag}")
+            return False
+
+        new_url = f"https://github.com/scaryrawr/claudio/archive/refs/tags/{latest_tag}.tar.gz"
+        new_sha256 = get_sha256(new_url)
+
+        new_content = re.sub(
+            r'url "https://github\.com/scaryrawr/claudio/archive/refs/tags/[^"]+\.tar\.gz"',
+            f'url "{new_url}"',
+            content,
+        )
+        new_content = re.sub(r'sha256 "[^"]+"', f'sha256 "{new_sha256}"', new_content)
+
+        with open(formula_path, "w") as f:
+            f.write(new_content)
+
+        print(f"Updated claudio from {current_tag} to {latest_tag}")
+        return True
+
+    except Exception as e:
+        print(f"Error updating claudio: {e}")
         return False
-
-    current_tag = url_match.group(1)
-    if current_tag == latest_tag:
-        print(f"claudio is already up to date at {latest_tag}")
-        return False
-
-    new_url = f"https://github.com/scaryrawr/claudio/archive/refs/tags/{latest_tag}.tar.gz"
-    new_sha256 = get_sha256(new_url)
-
-    new_content = re.sub(
-        r'url "https://github\.com/scaryrawr/claudio/archive/refs/tags/[^"]+\.tar\.gz"',
-        f'url "{new_url}"',
-        content,
-    )
-    new_content = re.sub(r'sha256 "[^"]+"', f'sha256 "{new_sha256}"', new_content)
-
-    with open(formula_path, "w") as f:
-        f.write(new_content)
-
-    print(f"Updated claudio from {current_tag} to {latest_tag}")
-    return True
 
 
 if __name__ == "__main__":
-    try:
-        update_claudio_formula()
-    except Exception as e:
-        print(f"Error updating claudio: {e}")
+    update_claudio_formula()

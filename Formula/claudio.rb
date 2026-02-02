@@ -9,7 +9,7 @@ class Claudio < Formula
   depends_on "rust" => :build
 
   def install
-    system "cargo", "install", "--locked", "--root=#{prefix}", "--path=."
+    system "cargo", "install", "--root=#{prefix}", "--locked", "--path=."
   end
 
   test do
