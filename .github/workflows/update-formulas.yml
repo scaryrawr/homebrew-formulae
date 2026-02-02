@@ -46,6 +46,13 @@ jobs:
         run: |
           python scripts/update-magus.py
 
+      - name: Update claudio formula
+        id: update-claudio
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python scripts/update-claudio.py
+
       - name: Check for changes
         id: check-changes
         run: |
