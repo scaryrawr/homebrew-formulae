@@ -82,21 +82,15 @@ def update_navigit_formula():
                     re.MULTILINE,
                 )
                 new_content = url_regex.sub(f'url "{new_url}"', new_content)
-
-                lines = new_content.split("\n")
-                for i, line in enumerate(lines):
-                    if asset_name in line and "url" in line:
-                        for j in range(i + 1, min(i + 5, len(lines))):
-                            if "sha256" in lines[j]:
-                                lines[j] = re.sub(
-                                    r'sha256 "[^"]+"',
-                                    f'sha256 "{new_sha256}"',
-                                    lines[j],
-                                )
-                                break
-                        break
-
-                new_content = "\n".join(lines)
+                url_sha_regex = re.compile(
+                    rf'url "https://github\.com/scaryrawr/navigit/releases/download/[^/]+/navigit-[^"]+-{re.escape(platform)}-{re.escape(arch)}\.tar\.gz"\n(\s*)sha256 "[^"]+"',
+                    re.MULTILINE,
+                )
+                new_content = url_sha_regex.sub(
+                    lambda m: f'url "{new_url}"\n{m.group(1)}sha256 "{new_sha256}"',
+                    new_content,
+                    count=1,
+                )
 
             except Exception as e:
                 print(f"Warning: Could not download {platform}-{arch} binary: {e}")
