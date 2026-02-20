@@ -80,15 +80,16 @@ jobs:
           git config user.email "action@github.com"
           git config user.name "GitHub Action"
 
-          # Create and switch to a new branch
-          git checkout -b update-formulas
+          # Create and switch to a new branch with a unique timestamp
+          BRANCH_NAME="update-formulas-$(date +%Y%m%d%H%M%S)"
+          git checkout -b "$BRANCH_NAME"
 
           # Add and commit changes
           git add .
           git commit -m "chore: update formula versions"
 
           # Push the branch
-          git push origin update-formulas
+          git push origin "$BRANCH_NAME"
 
           # Create pull request using GitHub CLI
           gh pr create \
@@ -96,6 +97,6 @@ jobs:
             --body "Automated update of formula versions to latest releases.
 
           This PR was automatically created by the update workflow." \
-            --head update-formulas \
+            --head "$BRANCH_NAME" \
             --base main \
             --assignee "${{ github.repository_owner }}"
