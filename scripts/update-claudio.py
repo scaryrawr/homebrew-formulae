@@ -47,7 +47,10 @@ def update_claudio_formula():
         with open(formula_path, "r") as f:
             content = f.read()
 
-        version_match = re.search(r'version "([^"]+)"', content)
+        version_match = re.search(
+            r'url "https://github\.com/scaryrawr/claudio/releases/download/v([^/]+)/',
+            content,
+        )
         if not version_match:
             print("Could not find version in claudio.rb")
             return False
@@ -65,7 +68,7 @@ def update_claudio_formula():
             "aarch64-unknown-linux-gnu",
         ]
 
-        new_content = re.sub(r'version "[^"]+"', f'version "{latest_version}"', content)
+        new_content = content
 
         for target in targets:
             asset_name = f"claudio-{latest_tag}-{target}.tar.gz"

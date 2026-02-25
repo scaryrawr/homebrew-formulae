@@ -1,7 +1,6 @@
 class Claudio < Formula
   desc "LM Studio wrapper around Claude Code"
   homepage "https://github.com/scaryrawr/claudio"
-  version "0.0.2"
   license "MIT"
 
   on_macos do
