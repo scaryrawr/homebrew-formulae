@@ -1,8 +1,8 @@
 class Claudio < Formula
   desc "LM Studio wrapper around Claude Code"
   homepage "https://github.com/scaryrawr/claudio"
-  url "https://github.com/scaryrawr/claudio/archive/refs/tags/v0.0.2.tar.gz"
-  sha256 "eacb8339181a1d9c3c13d9b7a048eff3e570b879ba0a7132641217202ffd58ef"
+  url "https://github.com/scaryrawr/claudio/archive/refs/tags/v0.0.3.tar.gz"
+  sha256 "99329e0d1cf480cd6709e8d7605ff8c64e5833e5aa4c6e6a95d15a67fed4273c"
   license "MIT"
   head "https://github.com/scaryrawr/claudio.git", branch: "main"
 
