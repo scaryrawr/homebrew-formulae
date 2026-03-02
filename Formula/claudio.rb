@@ -1,14 +1,12 @@
 class Claudio < Formula
   desc "LM Studio wrapper around Claude Code"
   homepage "https://github.com/scaryrawr/claudio"
+  url "https://github.com/scaryrawr/claudio/releases/download/v0.0.3/claudio-v0.0.3-aarch64-apple-darwin.tar.gz"
+  sha256 "0884e754f431d6aa78604f96868155b2241a3724aab80437a39c347aa03fc10a"
   license "MIT"
 
   on_macos do
     depends_on arch: :arm64
-    on_arm do
-      url "https://github.com/scaryrawr/claudio/releases/download/v0.0.3/claudio-v0.0.3-aarch64-apple-darwin.tar.gz"
-      sha256 "0884e754f431d6aa78604f96868155b2241a3724aab80437a39c347aa03fc10a"
-    end
   end
 
   on_linux do
