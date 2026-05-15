@@ -1,71 +1,10 @@
-# Homebrew Formulae Repository
+# Copilot instructions
 
-## Testing Commands
+Read `AGENTS.md` first. It is the shared source of truth for this Homebrew tap's layout, conventions, safety notes, and validation commands.
 
-```bash
-# Test syntax for all formulae
-brew test-bot --only-tap-syntax
+Keep this file limited to Copilot-specific guidance:
 
-# Build and install a single formula from source
-brew install --build-from-source Formula/<formula>.rb
-
-# Test a formula after installation
-brew test <formula>
-
-# Run full test suite (used in CI for PRs)
-brew test-bot --only-formulae
-```
-
-## Architecture
-
-This is a Homebrew tap with automated version updates:
-
-- **Formula/*.rb** - Homebrew formula definitions (Ruby)
-- **scripts/update-*.py** - Python scripts that auto-update each formula by fetching latest releases/commits from GitHub
-
-The update workflow runs daily and creates PRs when new versions are detected. Each update script:
-1. Fetches latest version info via `gh` CLI
-2. Downloads the tarball and calculates SHA256
-3. Updates the formula file with new URL, version, and checksum
-
-## Code Style
-
-- Ruby formulae: 2-space indentation, Homebrew Ruby style
-- Python scripts: PEP 8, snake_case naming
-- Formula class names: TitleCase matching filename (e.g., `codex.rb` → `class Codex`)
-- Always include: HTTPS URLs, SHA256 checksums, `license` field, `test do...end` block
-
-## Formula Structure
-
-Formulae follow this pattern:
-```ruby
-class FormulaName < Formula
-  desc "Short description"
-  homepage "https://example.com"
-  url "https://example.com/archive/v1.2.3.tar.gz"
-  version "1.2.3"
-  sha256 "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-  license "MIT"
-
-  depends_on "..." => :build  # build-time deps
-  depends_on "..."            # runtime deps
-
-  def install
-    # installation steps
-  end
-
-  test do
-    system "true"
-  end
-end
-```
-
-## Update Script Pattern
-
-Update scripts use `gh` CLI for GitHub API access and `curl` for downloads:
-```python
-subprocess.run(["gh", "api", f"repos/{repo}/releases/latest", "--jq", ".tag_name"], ...)
-subprocess.run(["curl", "-sL", url, "-o", temp_file.name], check=True)
-```
-
-Always use `check=True` with subprocess and handle `CalledProcessError`.
+- When adding durable repo guidance, update `AGENTS.md` instead of duplicating it here.
+- For `Formula/*.rb` edits, also apply `.github/instructions/formula.instructions.md`.
+- For `scripts/update-*.py` edits, also apply `.github/instructions/update-scripts.instructions.md`.
+- Use the `validate-tap` skill when you need to choose the right validation path for formula, updater, or workflow changes.
