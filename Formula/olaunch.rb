@@ -4,9 +4,11 @@ class Olaunch < Formula
   url "https://github.com/scaryrawr/olaunch/releases/download/v0.0.1/olaunch-v0.0.1-aarch64-apple-darwin.tar.gz"
   version "0.0.1"
   sha256 "1ddd1366a0f0b2e18ffe5a4465190e154472e6962e0dab098996a47b051dd9fb"
+  # Upstream v0.0.1 does not publish license metadata.
   license :cannot_represent
 
   on_macos do
+    # Upstream v0.0.1 does not publish an Intel macOS artifact.
     depends_on arch: :arm64
   end
 
@@ -26,6 +28,6 @@ class Olaunch < Formula
   end
 
   test do
-    system bin/"olaunch", "list", "integrations"
+    assert_match "copilot -", shell_output("#{bin}/olaunch list integrations")
   end
 end
