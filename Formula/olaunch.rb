@@ -28,6 +28,8 @@ class Olaunch < Formula
   end
 
   test do
-    assert_match "copilot -", shell_output("#{bin}/olaunch list integrations")
+    output = shell_output("#{bin}/olaunch list integrations", 0)
+    assert_match "copilot - GitHub's AI coding agent", output
+    assert_match "codex - OpenAI's open-source coding agent", output
   end
 end
