@@ -53,6 +53,13 @@ jobs:
         run: |
           python scripts/update-claudio.py
 
+      - name: Update olaunch formula
+        id: update-olaunch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python scripts/update-olaunch.py
+
       - name: Update navigit formula
         id: update-navigit
         env:
