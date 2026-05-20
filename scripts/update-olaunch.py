@@ -88,25 +88,22 @@ def update_olaunch_formula():
             print(f"Updated {target}: {new_sha256}")
             updates.append((target, new_url, new_sha256))
 
-        if version_match:
-            new_content = re.sub(
-                r'version "[^"]+"',
-                f'version "{latest_version}"',
-                content,
-                count=1,
-            )
-        else:
-            new_content = content
+        new_content = re.sub(
+            r'^\s*version "[^"]+"\n',
+            "",
+            content,
+            count=1,
+            flags=re.MULTILINE,
+        )
 
         for target, new_url, new_sha256 in updates:
             url_sha_regex = re.compile(
                 rf'url "https://github\.com/scaryrawr/olaunch/releases/download/[^/]+/olaunch-[^"]+-{re.escape(target)}\.tar\.gz"\n'
-                r'((?:\s*version "[^"]+"\n)?)(\s*)sha256 "[^"]+"',
+                r'(?:\s*version "[^"]+"\n)?(\s*)sha256 "[^"]+"',
                 re.MULTILINE,
             )
             new_content, replacements = url_sha_regex.subn(
-                lambda m: f'url "{new_url}"\n{m.group(1)}'
-                f'{m.group(2)}sha256 "{new_sha256}"',
+                lambda m: f'url "{new_url}"\n{m.group(1)}sha256 "{new_sha256}"',
                 new_content,
                 count=1,
             )
