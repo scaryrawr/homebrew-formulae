@@ -61,7 +61,7 @@ def update_olaunch_formula():
                 return False
             current_version = url_match.group(1).lstrip("v")
 
-        if version_match and current_version == latest_version:
+        if current_version == latest_version:
             print(f"olaunch is already up to date at {latest_version}")
             return False
 
@@ -90,12 +90,7 @@ def update_olaunch_formula():
                 count=1,
             )
         else:
-            new_content = re.sub(
-                r'(url "https://github\.com/scaryrawr/olaunch/releases/download/[^"]+"\n)',
-                rf'\1  version "{latest_version}"\n',
-                content,
-                count=1,
-            )
+            new_content = content
 
         for target, new_url, new_sha256 in updates:
             url_sha_regex = re.compile(
