@@ -2,7 +2,6 @@ class Olaunch < Formula
   desc "Open launcher for local/open model coding agents"
   homepage "https://github.com/scaryrawr/olaunch"
   url "https://github.com/scaryrawr/olaunch/releases/download/v0.1.1/olaunch-v0.1.1-aarch64-apple-darwin.tar.gz"
-  version "0.1.1"
   sha256 "de2ecbb476d05512107e66deb71accc460785fe69de01e09774b69426995abf9"
   # Upstream does not publish license metadata.
   license :cannot_represent
