@@ -10,7 +10,12 @@ def get_sha256(url):
     """Download file and calculate SHA256 checksum using curl."""
     with tempfile.NamedTemporaryFile() as temp_file:
         try:
-            subprocess.run(["curl", "-sL", url, "-o", temp_file.name], check=True)
+            subprocess.run(
+                ["curl", "-fsSL", url, "-o", temp_file.name],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
 
             sha256_hash = hashlib.sha256()
             with open(temp_file.name, "rb") as f:
@@ -19,7 +24,8 @@ def get_sha256(url):
 
             return sha256_hash.hexdigest()
         except subprocess.CalledProcessError as e:
-            raise Exception(f"Failed to download {url}: {e}")
+            details = e.stderr.strip() if e.stderr else str(e)
+            raise Exception(f"Failed to download {url}: {details}")
 
 
 def get_latest_release(repo):
