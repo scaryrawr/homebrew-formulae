@@ -1,8 +1,8 @@
 class Olaunch < Formula
   desc "Open launcher for local/open model coding agents"
   homepage "https://github.com/scaryrawr/olaunch"
-  url "https://github.com/scaryrawr/olaunch/releases/download/v0.1.1/olaunch-v0.1.1-aarch64-apple-darwin.tar.gz"
-  sha256 "de2ecbb476d05512107e66deb71accc460785fe69de01e09774b69426995abf9"
+  url "https://github.com/scaryrawr/olaunch/releases/download/v0.1.2/olaunch-v0.1.2-aarch64-apple-darwin.tar.gz"
+  sha256 "153d7005c3eac55835c0f5c74c546b6a0b1224229cc524daee03b0d4a9080c38"
   # Upstream does not publish license metadata.
   license :cannot_represent
 
@@ -13,12 +13,12 @@ class Olaunch < Formula
 
   on_linux do
     if Hardware::CPU.intel? && Hardware::CPU.is_64_bit?
-      url "https://github.com/scaryrawr/olaunch/releases/download/v0.1.1/olaunch-v0.1.1-x86_64-unknown-linux-gnu.tar.gz"
-      sha256 "0cf8c7dff18c70d9077bd49c585b3b8bff202bdb191fae7ecc1ff729269554a0"
+      url "https://github.com/scaryrawr/olaunch/releases/download/v0.1.2/olaunch-v0.1.2-x86_64-unknown-linux-gnu.tar.gz"
+      sha256 "bf75d669f42da95ab308dfcbb545e42d80154eae401e616d3339438e84d82e94"
     end
     if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
-      url "https://github.com/scaryrawr/olaunch/releases/download/v0.1.1/olaunch-v0.1.1-aarch64-unknown-linux-gnu.tar.gz"
-      sha256 "f9763f5065aab6a40c98704335452ccdd55749a115d497ad1804d7ebb257a415"
+      url "https://github.com/scaryrawr/olaunch/releases/download/v0.1.2/olaunch-v0.1.2-aarch64-unknown-linux-gnu.tar.gz"
+      sha256 "32ff37dcbbaef0720c2c0297b22d18f879b57bb9d1ad2f4913dac76bfbd93d67"
     end
   end
 
