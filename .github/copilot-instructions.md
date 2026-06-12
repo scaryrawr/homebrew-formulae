@@ -60,6 +60,11 @@ class FormulaName < Formula
 end
 ```
 
+## Formula-Specific Notes
+
+- `Formula/omlx.rb` is a head-only formula for the unstable custom `scaryrawr/omlx` fork. Upstream `jundot/omlx` formula changes are useful references, but keep the local formula pointed at the fork unless instructed otherwise.
+- `omlx` installs optional `mlx-audio` from a pinned source resource. When updating that pin, recalculate the tarball SHA256 and inspect `mlx-audio`'s dependency metadata before keeping or adding `inreplace` patches.
+
 ## Update Script Pattern
 
 Update scripts use `gh` CLI for GitHub API access and `curl` for downloads:

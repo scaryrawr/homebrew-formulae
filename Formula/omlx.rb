@@ -1,15 +1,8 @@
 class Omlx < Formula
   desc "LLM inference server optimized for Apple Silicon"
   homepage "https://github.com/scaryrawr/omlx"
-  url "https://github.com/scaryrawr/omlx/archive/de7f78d49d7cf54b076e87dbf68e3736bf5d5d6f.tar.gz"
-  version "0.3.9.dev2"
-  sha256 "f0aea2ca2d0a99005c1e10e7ce5a55978c0ef2764edc68e4cd8e2ef50fb60e0a"
   license "Apache-2.0"
   head "https://github.com/scaryrawr/omlx.git", branch: "main"
-
-  livecheck do
-    skip "Uses a pinned commit tarball"
-  end
 
   option "with-image", "Install mflux-backed image support"
   option "with-audio", "Install mlx-audio support"
@@ -20,11 +13,10 @@ class Omlx < Formula
   depends_on :macos
   depends_on "python@3.11"
 
-  # mlx-audio pins mlx-lm==0.31.1 which conflicts with omlx's git-pinned
-  # mlx-lm. Fetch source separately so we can patch the pin before install.
+  # Fetch source separately so the optional audio install stays pinned.
   resource "mlx-audio" do
-    url "https://github.com/Blaizzy/mlx-audio/archive/51753266e0a4f766fd5e6fbc46652224efc23981.tar.gz"
-    sha256 "7f9297a18f4cfa8a30efde3ba0056b87dfbb5d64747591eef5ff44333f9a19ef"
+    url "https://github.com/Blaizzy/mlx-audio/archive/a7ef98604cfd752e9e5c9011bcee8ec8c67228be.tar.gz"
+    sha256 "9c3ccf98e7714cc2f0fc6802a311e6f9f1078102195a77e0404ff026f06be78d"
   end
 
   service do
@@ -44,18 +36,30 @@ class Omlx < Formula
     system "/usr/bin/codesign", "--force", "--sign", "-", binary
   end
 
+  def rewrite_dylib_id(binary, new_name)
+    odie "#{binary} not found" unless File.exist?(binary)
+    return unless Utils.safe_popen_read("/usr/bin/otool", "-l", binary).include?("cmd LC_ID_DYLIB")
+    return if Utils.safe_popen_read("/usr/bin/otool", "-D", binary).include?(new_name)
+
+    system "/usr/bin/install_name_tool", "-id", new_name, binary
+    system "/usr/bin/codesign", "--force", "--sign", "-", binary
+  end
+
   def install
     # Create venv with pip so dependency resolution works properly.
     system "python3.11", "-m", "venv", libexec
 
-    # Build Rust-based packages from source with headerpad to prevent
-    # Homebrew dylib ID fixup failure (Mach-O header too small for absolute paths).
-    # tokenizers is excluded: its wheel ships a stable-ABI .abi3.so that does
-    # not need Homebrew's dylib ID rewrite, and building from source fails on
-    # macOS 15+ due to PyO3 linker errors (missing Python symbols at link time).
+    # Build native extensions from source with headerpad so Homebrew can
+    # rewrite Mach-O install names to absolute Cellar/opt paths. Rust/maturin
+    # extension builds (cohere_melody) need the linker flag via RUSTFLAGS;
+    # C/C++ extension builds use LDFLAGS. tokenizers is excluded: its wheel
+    # ships a stable-ABI .abi3.so that does not need Homebrew's dylib ID
+    # rewrite, and building from source fails on macOS 15+ due to PyO3 linker
+    # errors (missing Python symbols at link time).
     ENV.append "LDFLAGS", "-Wl,-headerpad_max_install_names"
-    ENV.append "RUSTFLAGS", "-C link-args=-Wl,-headerpad_max_install_names"
-    ENV["PIP_NO_BINARY"] = "nh3,pydantic-core,rpds-py,tiktoken"
+    ENV.append "RUSTFLAGS", "-C link-arg=-Wl,-headerpad_max_install_names"
+    ENV["PIP_NO_BINARY"] = "cohere_melody,nh3,pydantic-core,rpds-py,tiktoken"
+    ENV["PIP_NO_CACHE_DIR"] = "1"
 
     extras = []
     extras << "image" if build.with?("image")
@@ -63,11 +67,9 @@ class Omlx < Formula
     install_spec = extras.empty? ? buildpath.to_s : "#{buildpath}[#{extras.join(",")}]"
     system libexec/"bin/pip", "install", install_spec
 
-    # Install mlx-audio with patched mlx-lm pin to avoid version conflict.
+    # Install mlx-audio from the pinned source revision.
     if build.with?("audio")
       resource("mlx-audio").stage do
-        inreplace "pyproject.toml", /"mlx-lm==[\d.]+"/, '"mlx-lm>=0.31.1"'
-        inreplace "pyproject.toml", /"misaki>=[\d.]+"/, '"misaki>=0.7.4"'
         system libexec/"bin/pip", "install", ".[all]"
       end
     end
@@ -77,6 +79,9 @@ class Omlx < Formula
 
     site_packages = Utils.safe_popen_read(libexec/"bin/python", "-c",
       "import site; print(site.getsitepackages()[0])").chomp
+    cohere_ext = Dir["#{site_packages}/cohere_melody/cohere_melody*.so"].first
+    odie "cohere_melody extension not found" if cohere_ext.nil?
+    rewrite_dylib_id cohere_ext, "#{opt_prefix}/#{Pathname.new(cohere_ext).relative_path_from(prefix)}"
     rewrite_install_name "#{site_packages}/mlx/lib/libmlx.dylib",
                          "@rpath/libjaccl.dylib",
                          "@loader_path/libjaccl.dylib"
