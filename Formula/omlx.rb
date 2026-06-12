@@ -38,6 +38,7 @@ class Omlx < Formula
 
   def rewrite_dylib_id(binary, new_name)
     odie "#{binary} not found" unless File.exist?(binary)
+    return unless Utils.safe_popen_read("/usr/bin/otool", "-l", binary).include?("cmd LC_ID_DYLIB")
     return if Utils.safe_popen_read("/usr/bin/otool", "-D", binary).include?(new_name)
 
     system "/usr/bin/install_name_tool", "-id", new_name, binary
