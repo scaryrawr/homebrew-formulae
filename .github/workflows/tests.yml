@@ -41,7 +41,7 @@ jobs:
           changed_formulae="$(git diff --name-only origin/main...HEAD -- 'Formula/*.rb')"
           if [[ "${changed_formulae}" == "Formula/omlx.rb" ]]; then
             if [[ "${RUNNER_OS}" == "macOS" ]]; then
-              brew install --HEAD --build-from-source Formula/omlx.rb
+              brew install --HEAD --build-from-source scaryrawr/formulae/omlx
               brew test omlx
             else
               echo "Skipping head-only macOS formula omlx on ${RUNNER_OS}"
