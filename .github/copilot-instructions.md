@@ -64,6 +64,7 @@ end
 
 - `Formula/omlx.rb` is a head-only formula for the unstable custom `scaryrawr/omlx` fork. Upstream `jundot/omlx` formula changes are useful references, but keep the local formula pointed at the fork unless instructed otherwise.
 - `omlx` installs optional `mlx-audio` from a pinned source resource. When updating that pin, recalculate the tarball SHA256 and inspect `mlx-audio`'s dependency metadata before keeping or adding `inreplace` patches.
+- `omlx` forces selected native Python packages, including `watchfiles`, to build from source with headerpad linker flags so Homebrew can rewrite Mach-O install names during `brew reinstall --HEAD`; do not remove them from `PIP_NO_BINARY` without retesting that linkage fix.
 
 ## Update Script Pattern
 

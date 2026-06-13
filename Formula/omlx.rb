@@ -51,14 +51,14 @@ class Omlx < Formula
 
     # Build native extensions from source with headerpad so Homebrew can
     # rewrite Mach-O install names to absolute Cellar/opt paths. Rust/maturin
-    # extension builds (cohere_melody) need the linker flag via RUSTFLAGS;
-    # C/C++ extension builds use LDFLAGS. tokenizers is excluded: its wheel
-    # ships a stable-ABI .abi3.so that does not need Homebrew's dylib ID
-    # rewrite, and building from source fails on macOS 15+ due to PyO3 linker
-    # errors (missing Python symbols at link time).
+    # extension builds (cohere_melody, watchfiles) need the linker flag via
+    # RUSTFLAGS; C/C++ extension builds use LDFLAGS. tokenizers is excluded:
+    # its wheel ships a stable-ABI .abi3.so that does not need Homebrew's
+    # dylib ID rewrite, and building from source fails on macOS 15+ due to
+    # PyO3 linker errors (missing Python symbols at link time).
     ENV.append "LDFLAGS", "-Wl,-headerpad_max_install_names"
     ENV.append "RUSTFLAGS", "-C link-arg=-Wl,-headerpad_max_install_names"
-    ENV["PIP_NO_BINARY"] = "cohere_melody,nh3,pydantic-core,rpds-py,tiktoken"
+    ENV["PIP_NO_BINARY"] = "cohere_melody,nh3,pydantic-core,rpds-py,tiktoken,watchfiles"
     ENV["PIP_NO_CACHE_DIR"] = "1"
 
     extras = []
@@ -82,6 +82,11 @@ class Omlx < Formula
     cohere_ext = Dir["#{site_packages}/cohere_melody/cohere_melody*.so"].first
     odie "cohere_melody extension not found" if cohere_ext.nil?
     rewrite_dylib_id cohere_ext, "#{opt_prefix}/#{Pathname.new(cohere_ext).relative_path_from(prefix)}"
+    watchfiles_ext = Dir["#{site_packages}/watchfiles/_rust_notify*.so"].first
+    odie "watchfiles extension not found" if watchfiles_ext.nil?
+    rewrite_dylib_id watchfiles_ext,
+                     "#{opt_prefix}/#{Pathname.new(watchfiles_ext).relative_path_from(prefix).dirname}/" \
+                     "watchfiles.#{File.basename(watchfiles_ext)}"
     rewrite_install_name "#{site_packages}/mlx/lib/libmlx.dylib",
                          "@rpath/libjaccl.dylib",
                          "@loader_path/libjaccl.dylib"
