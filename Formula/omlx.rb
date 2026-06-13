@@ -84,9 +84,7 @@ class Omlx < Formula
     rewrite_dylib_id cohere_ext, "#{opt_prefix}/#{Pathname.new(cohere_ext).relative_path_from(prefix)}"
     watchfiles_ext = Dir["#{site_packages}/watchfiles/_rust_notify*.so"].first
     odie "watchfiles extension not found" if watchfiles_ext.nil?
-    rewrite_dylib_id watchfiles_ext,
-                     "#{opt_prefix}/#{Pathname.new(watchfiles_ext).relative_path_from(prefix).dirname}/" \
-                     "watchfiles.#{File.basename(watchfiles_ext)}"
+    rewrite_dylib_id watchfiles_ext, "#{opt_prefix}/#{Pathname.new(watchfiles_ext).relative_path_from(prefix)}"
     rewrite_install_name "#{site_packages}/mlx/lib/libmlx.dylib",
                          "@rpath/libjaccl.dylib",
                          "@loader_path/libjaccl.dylib"
