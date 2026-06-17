@@ -16,6 +16,12 @@ brew test <formula>
 brew test-bot --only-formulae
 ```
 
+When working from a Copilot worktree outside Homebrew's tap directory, Homebrew
+may reject `Formula/<formula>.rb` paths. For local install/test validation,
+temporarily symlink the worktree under `$(brew --repository)/Library/Taps/...`,
+run Homebrew with `HOMEBREW_NO_REQUIRE_TAP_TRUST=1`, and remove the symlink
+afterward.
+
 ## Architecture
 
 This is a Homebrew tap with automated version updates:
@@ -65,6 +71,7 @@ end
 - `Formula/omlx.rb` is a head-only formula for the unstable custom `scaryrawr/omlx` fork. Upstream `jundot/omlx` formula changes are useful references, but keep the local formula pointed at the fork unless instructed otherwise.
 - `omlx` installs optional `mlx-audio` from a pinned source resource. When updating that pin, recalculate the tarball SHA256 and inspect `mlx-audio`'s dependency metadata before keeping or adding `inreplace` patches.
 - `omlx` forces selected native Python packages, including `watchfiles`, to build from source with headerpad linker flags so Homebrew can rewrite Mach-O install names during `brew reinstall --HEAD`; do not remove them from `PIP_NO_BINARY` without retesting that linkage fix.
+- For Python formulae that intentionally let pip resolve upstream dependencies instead of vendoring `resource` blocks, use an explicit virtualenv plus `pip install` rather than `Language::Python::Virtualenv#pip_install_and_link`, which installs with `--no-deps`. If native Python extensions fail Homebrew linkage rewriting, force those packages to build from source with headerpad linker flags and add the needed build dependencies.
 
 ## Update Script Pattern
 

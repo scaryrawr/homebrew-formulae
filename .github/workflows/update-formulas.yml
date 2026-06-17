@@ -67,6 +67,13 @@ jobs:
         run: |
           python scripts/update-navigit.py
 
+      - name: Update smahtutils formula
+        id: update-smahtutils
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python scripts/update-smahtutils.py
+
       - name: Check for changes
         id: check-changes
         run: |
