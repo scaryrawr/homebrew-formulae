@@ -6,15 +6,29 @@ class Smahtutils < Formula
   license :cannot_represent
   head "https://github.com/scaryrawr/smahtutils.git", branch: "main"
 
+  depends_on "pkgconf" => :build
   depends_on "rust" => :build
   depends_on "python@3.11"
+
+  on_linux do
+    depends_on "freetype"
+    depends_on "jpeg-turbo"
+    depends_on "libpng"
+    depends_on "libtiff"
+    depends_on "little-cms2"
+    depends_on "openjpeg"
+    depends_on "webp"
+    depends_on "zlib-ng-compat"
+  end
 
   def install
     system "python3.11", "-m", "venv", libexec
     ENV.append "LDFLAGS", "-Wl,-headerpad_max_install_names"
     ENV.append "RUSTFLAGS", "-C link-arg=-Wl,-headerpad_max_install_names"
     ENV["PIP_NO_CACHE_DIR"] = "1"
-    ENV["PIP_NO_BINARY"] = "annoy,jiter,pydantic-core,rpds-py"
+    no_binary = %w[annoy jiter pydantic-core rpds-py]
+    no_binary << "pillow" if OS.linux?
+    ENV["PIP_NO_BINARY"] = no_binary.join(",")
     system libexec/"bin/pip", "install", buildpath
 
     bin.install_symlink libexec/"bin/smahtiepants"
