@@ -62,10 +62,30 @@ class Omlx < Formula
     ENV["PIP_NO_CACHE_DIR"] = "1"
 
     extras = []
-    extras << "image" if build.with?("image")
     extras << "grammar" if build.with?("grammar")
     install_spec = extras.empty? ? buildpath.to_s : "#{buildpath}[#{extras.join(",")}]"
     system libexec/"bin/pip", "install", install_spec
+
+    # oMLX pins MLX to the ABI version used by its custom kernels, while its
+    # pinned mflux revision can temporarily retain an older MLX upper bound.
+    # Install mflux without dependencies, then resolve everything except MLX
+    # so image support uses oMLX's authoritative engine pin.
+    if build.with?("image")
+      mflux_spec = (buildpath/"pyproject.toml").read[/^\s*"(mflux @ [^"]+)"/, 1]
+      odie "mflux image dependency not found in pyproject.toml" if mflux_spec.nil?
+
+      system libexec/"bin/pip", "install", "--no-deps", mflux_spec
+      mflux_requirements = Utils.safe_popen_read(libexec/"bin/python", "-c", <<~PYTHON).lines(chomp: true)
+        import importlib.metadata
+        import re
+
+        for requirement in importlib.metadata.requires("mflux") or []:
+            match = re.match(r"\\s*([A-Za-z0-9_.-]+)", requirement)
+            if match and match.group(1).lower().replace("_", "-") != "mlx":
+                print(requirement)
+      PYTHON
+      system libexec/"bin/pip", "install", *mflux_requirements unless mflux_requirements.empty?
+    end
 
     # Install mlx-audio from the pinned source revision.
     if build.with?("audio")
@@ -98,6 +118,11 @@ class Omlx < Formula
     bin.install_symlink libexec/"bin/omlx"
   end
 
+  # Apply optional dependency metadata and native-wheel fixes after install.
+  # The pinned mflux revision works with MLX 0.32 but still declares an older
+  # upper bound, so keep its installed metadata consistent with the resolver
+  # override above until oMLX updates to a corrected mflux revision.
+  #
   # Patch the macOS arm64 xgrammar wheel so its native binding loads.
   # The 0.1.32+ wheel ships libxgrammar_bindings.dylib with
   # @rpath/libtvm_ffi.dylib but no LC_RPATH pointing at where tvm_ffi
@@ -114,12 +139,29 @@ class Omlx < Formula
   # write to RECORD inside `def install` is wiped before the user
   # sees it.
   def post_install
-    return if build.without?("grammar")
+    return if build.without?("image") && build.without?("grammar")
 
-    ohai "Patching xgrammar macOS arm64 wheel"
     py = libexec/"bin/python"
     site = Utils.safe_popen_read(py, "-c",
                                  "import site; print(site.getsitepackages()[0])").chomp
+
+    if build.with?("image")
+      mflux_metadata = Dir["#{site}/mflux-*.dist-info/METADATA"].first
+      odie "mflux package metadata not found under #{site}" if mflux_metadata.nil?
+
+      old_requirement = "Requires-Dist: mlx>=0.31.0,<0.32.0 ; sys_platform == 'darwin'"
+      new_requirement = "Requires-Dist: mlx>=0.31.0,<0.33.0 ; sys_platform == 'darwin'"
+      metadata_contents = File.read(mflux_metadata)
+      if metadata_contents.include?(old_requirement)
+        inreplace mflux_metadata, old_requirement, new_requirement
+      elsif metadata_contents.exclude?(new_requirement)
+        odie "unexpected mflux MLX requirement in #{mflux_metadata}"
+      end
+    end
+
+    return if build.without?("grammar")
+
+    ohai "Patching xgrammar macOS arm64 wheel"
     tvmlib = Utils.safe_popen_read(py, "-c",
       "import os, tvm_ffi; print(os.path.join(os.path.dirname(tvm_ffi.__file__), 'lib'))").chomp
     dylib = "#{site}/xgrammar/libxgrammar_bindings.dylib"
@@ -175,5 +217,6 @@ class Omlx < Formula
   test do
     assert_match "serve", shell_output("#{bin}/omlx --help")
     system libexec/"bin/python", "-c", "import importlib.metadata; importlib.metadata.version('omlx')"
+    system libexec/"bin/python", "-c", "import mflux" if build.with?("image")
   end
 end
