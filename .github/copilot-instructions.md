@@ -70,7 +70,8 @@ end
 
 - `Formula/omlx.rb` is a head-only formula for the unstable custom `scaryrawr/omlx` fork. Upstream `jundot/omlx` formula changes are useful references, but keep the local formula pointed at the fork unless instructed otherwise.
 - `omlx` installs optional `mlx-audio` from a pinned source resource. When updating that pin, recalculate the tarball SHA256 and inspect `mlx-audio`'s dependency metadata before keeping or adding `inreplace` patches.
-- `omlx` forces selected native Python packages, including `watchfiles`, to build from source with headerpad linker flags so Homebrew can rewrite Mach-O install names during `brew reinstall --HEAD`; do not remove them from `PIP_NO_BINARY` without retesting that linkage fix.
+- `omlx` forces selected native Python packages, including `watchfiles`, to build from source with headerpad linker flags so Homebrew can rewrite Mach-O install names during a HEAD reinstall. Current Homebrew does not accept `--HEAD` with `brew reinstall`; reinstall the head-only formula normally and preserve its options. Do not remove packages from `PIP_NO_BINARY` without retesting that linkage fix.
+- When `scaryrawr/omlx` changes its exact `mlx` pin, inspect optional engine metadata—especially the pinned `scaryrawr/mflux` image dependency—for incompatible bounds. Before relaxing a bound, require a clean resolver/`pip check` result and a real image-generation smoke test on the new MLX version.
 - For Python formulae that intentionally let pip resolve upstream dependencies instead of vendoring `resource` blocks, use an explicit virtualenv plus `pip install` rather than `Language::Python::Virtualenv#pip_install_and_link`, which installs with `--no-deps`. If native Python extensions fail Homebrew linkage rewriting, force those packages to build from source with headerpad linker flags and add the needed build dependencies.
 
 ## Update Script Pattern
