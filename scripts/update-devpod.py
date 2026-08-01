@@ -10,7 +10,7 @@ def get_sha256(url):
     """Download a file and calculate its SHA256 checksum."""
     with tempfile.NamedTemporaryFile() as temp_file:
         try:
-            subprocess.run(["curl", "-sL", url, "-o", temp_file.name], check=True)
+            subprocess.run(["curl", "-fsSL", url, "-o", temp_file.name], check=True)
         except subprocess.CalledProcessError as e:
             raise Exception(f"Failed to download {url}: {e}")
 
