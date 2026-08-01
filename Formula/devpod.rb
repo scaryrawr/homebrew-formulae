@@ -7,7 +7,7 @@ class Devpod < Formula
   on_macos do
     if Hardware::CPU.arm?
       url "https://github.com/scaryrawr/devpod/releases/download/v0.0.5/devpod-darwin-arm64"
-      sha256 "1eea2dc92eb9b342203224ec0bd34261f6dd79d8eb04c4d65b4b355ecca17e9"
+      sha256 "16eea2dc92eb9b342203224ec0bd34261f6dd79d8eb04c4d65b4b355ecca17e9"
     elsif Hardware::CPU.intel?
       url "https://github.com/scaryrawr/devpod/releases/download/v0.0.5/devpod-darwin-amd64"
       sha256 "6f3de5784f788284e5d7fee77cd02bbca440a0881e860d681779955c00378984"
