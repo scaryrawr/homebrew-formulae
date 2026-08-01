@@ -74,6 +74,13 @@ jobs:
         run: |
           python scripts/update-smahtutils.py
 
+      - name: Update devpod formula
+        id: update-devpod
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python scripts/update-devpod.py
+
       - name: Check for changes
         id: check-changes
         run: |
