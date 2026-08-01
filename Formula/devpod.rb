@@ -1,7 +1,6 @@
 class Devpod < Formula
   desc "Codespaces-like tool for reproducible developer environments"
   homepage "https://github.com/scaryrawr/devpod"
-  version "0.0.5"
   license "MPL-2.0"
 
   on_macos do
