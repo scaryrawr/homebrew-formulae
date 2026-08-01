@@ -1,7 +1,6 @@
 class Navigit < Formula
   desc "Context-aware Git tool dispatcher"
   homepage "https://github.com/scaryrawr/navigit"
-  version "0.0.2"
   license :cannot_represent
   head "https://github.com/scaryrawr/navigit.git", branch: "main"
 
