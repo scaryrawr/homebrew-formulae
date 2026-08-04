@@ -46,6 +46,10 @@ class Omlx < Formula
   end
 
   def install
+    # Homebrew disables user pip configuration inside formula builds. Forward
+    # its supported package-index setting to pip and build-isolation subprocesses.
+    ENV["PIP_INDEX_URL"] = ENV["HOMEBREW_PIP_INDEX_URL"] if ENV["HOMEBREW_PIP_INDEX_URL"].present?
+
     # Create venv with pip so dependency resolution works properly.
     system "python3.11", "-m", "venv", libexec
 
