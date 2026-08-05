@@ -50,8 +50,10 @@ class Omlx < Formula
     # its supported package-index setting to pip and build-isolation subprocesses.
     ENV["PIP_INDEX_URL"] = ENV["HOMEBREW_PIP_INDEX_URL"] if ENV["HOMEBREW_PIP_INDEX_URL"].present?
 
-    # Create venv with pip so dependency resolution works properly.
-    system "python3.11", "-m", "venv", libexec
+    # Keep the venv interpreter stable throughout pip's isolated source builds.
+    # Symlinked executables can disappear when Homebrew replaces the active
+    # Python keg during a long HEAD reinstall.
+    system "python3.11", "-m", "venv", "--copies", libexec
 
     # Build native extensions from source with headerpad so Homebrew can
     # rewrite Mach-O install names to absolute Cellar/opt paths. Rust/maturin
