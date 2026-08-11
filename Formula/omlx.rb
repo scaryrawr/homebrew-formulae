@@ -1,4 +1,6 @@
 class Omlx < Formula
+  CUSTOM_KERNELS = %w[bonsai glm_moe_dsa minimax_m3 qwen35_prefill].freeze
+
   desc "LLM inference server optimized for Apple Silicon"
   homepage "https://github.com/scaryrawr/omlx"
   license "Apache-2.0"
@@ -6,6 +8,8 @@ class Omlx < Formula
 
   option "with-image", "Install mflux-backed image support"
   option "with-audio", "Install mlx-audio support"
+  option "with-custom-kernel",
+         "Build native custom kernels for Bonsai, GLM-5.2, MiniMax M3 and Qwen3.5/3.6 acceleration"
   option "with-grammar", "Install xgrammar for structured output (requires torch, ~2GB)"
 
   depends_on "rust" => :build
@@ -13,10 +17,25 @@ class Omlx < Formula
   depends_on :macos
   depends_on "python@3.11"
 
+  # macOS 27 beta's `strip` corrupts dynamic offsets in Mach-O libraries
+  # (llvm/llvm-project#203678). Skip Homebrew's post-install clean pass over
+  # the venv so it never runs `strip` on the compiled dylibs.
+  on_macos do
+    skip_clean "libexec" if MacOS.version >= "27"
+  end
+
   # Fetch source separately so the optional audio install stays pinned.
   resource "mlx-audio" do
-    url "https://github.com/Blaizzy/mlx-audio/archive/a7ef98604cfd752e9e5c9011bcee8ec8c67228be.tar.gz"
-    sha256 "9c3ccf98e7714cc2f0fc6802a311e6f9f1078102195a77e0404ff026f06be78d"
+    url "https://github.com/Blaizzy/mlx-audio/archive/d28d68c6ac4e28f7d2d66007f640b06cf3fd8ceb.tar.gz"
+    sha256 "3d9742f7ef8ca7a83fe47c0cffc872c5809a1b8f853fa4457b4fb830cd06d7b4"
+  end
+
+  # Kokoro's English G2P path uses misaki + spaCy. Bundle the spaCy
+  # language model so the first TTS request does not download at runtime.
+  resource "en-core-web-sm" do
+    url "https://github.com/explosion/spacy-models/releases/download/" \
+        "en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
+    sha256 "1932429db727d4bff3deed6b34cfc05df17794f4a52eeb26cf8928f7c1a0fb85"
   end
 
   service do
@@ -62,8 +81,28 @@ class Omlx < Formula
     # PyO3 linker errors (missing Python symbols at link time).
     ENV.append "LDFLAGS", "-Wl,-headerpad_max_install_names"
     ENV.append "RUSTFLAGS", "-C link-arg=-Wl,-headerpad_max_install_names"
-    ENV["PIP_NO_BINARY"] = "cohere_melody,nh3,pydantic-core,rpds-py,tiktoken,watchfiles"
+    no_binary = "cohere_melody,nh3,pydantic-core,rpds-py,tiktoken,watchfiles"
+    if MacOS.version >= "27"
+      # macOS 27's dyld rejects prebuilt Rust wheels whose LINKEDIT string
+      # pool is only 4-byte aligned. Build tokenizers locally without strip.
+      no_binary += ",tokenizers"
+      ENV["CARGO_PROFILE_RELEASE_STRIP"] = "false"
+      ENV["MATURIN_STRIP"] = "false"
+    end
+    ENV["PIP_NO_BINARY"] = no_binary
     ENV["PIP_NO_CACHE_DIR"] = "1"
+
+    if build.with?("custom-kernel")
+      kernel_sources = CUSTOM_KERNELS.map do |kernel|
+        buildpath/"omlx/custom_kernels/#{kernel}/csrc"
+      end
+      unless kernel_sources.all?(&:directory?)
+        odie "--with-custom-kernel requires oMLX custom kernel sources"
+      end
+
+      ENV["OMLX_WITH_CUSTOM_KERNEL"] = "1"
+      ENV.append "CMAKE_ARGS", "-DPython_EXECUTABLE=#{libexec}/bin/python"
+    end
 
     extras = []
     extras << "image" if build.with?("image")
@@ -71,11 +110,40 @@ class Omlx < Formula
     install_spec = extras.empty? ? buildpath.to_s : "#{buildpath}[#{extras.join(",")}]"
     system libexec/"bin/pip", "install", install_spec
 
+    if build.with?("custom-kernel")
+      Dir.chdir(libexec) do
+        verify_custom_kernels(libexec/"bin/python")
+      end
+    end
+
     # Install mlx-audio from the pinned source revision.
     if build.with?("audio")
+      # mlx-audio's current metadata conflicts with oMLX's newer transformers
+      # pin and omits several runtime dependencies, so mirror the fork's
+      # bundle dependency set and install mlx-audio itself without deps.
+      system libexec/"bin/pip", "install",
+             "scipy>=1.11.0",
+             "librosa>=0.10.0",
+             "miniaudio>=1.61",
+             "numba>=0.59.0",
+             "pyloudnorm>=0.1.0",
+             "sounddevice>=0.5.3",
+             "misaki>=0.9.4",
+             "num2words>=0.5.14",
+             "spacy>=3.8.4",
+             "phonemizer-fork>=3.3.2",
+             "espeakng-loader>=0.2.4",
+             "webrtcvad>=2.0.10",
+             "setuptools<81",
+             "mistral-common[audio]>=1.10"
       resource("mlx-audio").stage do
-        system libexec/"bin/pip", "install", ".[all]"
+        system libexec/"bin/pip", "install", "--no-deps", "."
       end
+
+      spacy_model_wheel = buildpath/"en_core_web_sm-3.8.0-py3-none-any.whl"
+      cp resource("en-core-web-sm").cached_download, spacy_model_wheel
+      system libexec/"bin/pip", "install", "--no-deps", spacy_model_wheel
+      system libexec/"bin/python", "-c", "import spacy; spacy.load('en_core_web_sm')"
     end
 
     # python-multipart is declared in omlx's [audio] extra, not in mlx-audio.
@@ -102,6 +170,18 @@ class Omlx < Formula
     bin.install_symlink libexec/"bin/omlx"
   end
 
+  # Both fixups below must run in post_install because Homebrew's cleaning
+  # pass rewrites Mach-O install names and removes wheel RECORD files.
+  def post_install
+    return if build.without?("grammar") && build.without?("custom-kernel")
+
+    python = libexec/"bin/python"
+    site = Utils.safe_popen_read(python, "-c",
+                                 "import site; print(site.getsitepackages()[0])").chomp
+    patch_xgrammar(python, site) if build.with?("grammar")
+    fix_custom_kernel_rpaths(python, site) if build.with?("custom-kernel")
+  end
+
   # Patch the macOS arm64 xgrammar wheel so its native binding loads.
   # The 0.1.32+ wheel ships libxgrammar_bindings.dylib with
   # @rpath/libtvm_ffi.dylib but no LC_RPATH pointing at where tvm_ffi
@@ -110,21 +190,9 @@ class Omlx < Formula
   # Both manifest as RuntimeError("Cannot find library: ...") at
   # `import xgrammar`, which crashes /admin/api/grammar/parsers and
   # hides the Reasoning Parser dropdown.
-  #
-  # Runs in post_install rather than install because Homebrew's
-  # post-install "Cleaning" step deletes every dist-info/RECORD file
-  # in the keg as part of its relocation pass (RECORD hashes become
-  # invalid once brew rewrites Mach-O install names). Anything we
-  # write to RECORD inside `def install` is wiped before the user
-  # sees it.
-  def post_install
-    return if build.without?("grammar")
-
+  def patch_xgrammar(python, site)
     ohai "Patching xgrammar macOS arm64 wheel"
-    py = libexec/"bin/python"
-    site = Utils.safe_popen_read(py, "-c",
-                                 "import site; print(site.getsitepackages()[0])").chomp
-    tvmlib = Utils.safe_popen_read(py, "-c",
+    tvmlib = Utils.safe_popen_read(python, "-c",
       "import os, tvm_ffi; print(os.path.join(os.path.dirname(tvm_ffi.__file__), 'lib'))").chomp
     dylib = "#{site}/xgrammar/libxgrammar_bindings.dylib"
     dist_dirs = Dir["#{site}/xgrammar-*.dist-info"]
@@ -173,11 +241,50 @@ class Omlx < Formula
     # Verify the patch took. Failing here is much less confusing than
     # the user discovering it later via a 500 from the admin route.
     ohai "  verifying import xgrammar..."
-    system py, "-c", "import xgrammar; print('xgrammar import OK')"
+    system python, "-c", "import xgrammar; print('xgrammar import OK')"
+  end
+
+  # Homebrew rewrites libmlx's dylib ID after install, so custom kernels need
+  # an rpath to the final mlx library directory added after that clean pass.
+  def fix_custom_kernel_rpaths(python, site)
+    ohai "Adding mlx rpath to custom kernel binaries"
+    mlx_lib = Utils.safe_popen_read(python, "-c",
+      "import os, mlx.core; print(os.path.join(os.path.dirname(mlx.core.__file__), 'lib'))").chomp
+    odie "mlx lib dir not found at #{mlx_lib}" unless File.directory?(mlx_lib)
+    binaries = Dir["#{site}/omlx/custom_kernels/*/{_ext*.so,lib*_kernel_ops.dylib}"]
+    odie "no custom kernel binaries under #{site}/omlx/custom_kernels" if binaries.empty?
+
+    binaries.each do |binary|
+      if Utils.safe_popen_read("/usr/bin/otool", "-l", binary).include?(mlx_lib)
+        ohai "  #{File.basename(binary)}: mlx rpath already present"
+        next
+      end
+
+      ohai "  adding rpath to #{File.basename(binary)}"
+      system "/usr/bin/install_name_tool", "-add_rpath", mlx_lib, binary
+      system "/usr/bin/codesign", "--force", "--sign", "-", binary
+    end
+
+    ohai "  verifying custom kernel imports..."
+    verify_custom_kernels(python)
+  end
+
+  def verify_custom_kernels(python)
+    system python, "-c", <<~PYTHON
+      import importlib
+      failed = {}
+      for package in #{CUSTOM_KERNELS.inspect}:
+          fast = importlib.import_module(f"omlx.custom_kernels.{package}.fast")
+          if not fast.is_native_available():
+              failed[package] = str(fast.import_error())
+      assert not failed, failed
+    PYTHON
   end
 
   test do
     assert_match "serve", shell_output("#{bin}/omlx --help")
     system libexec/"bin/python", "-c", "import importlib.metadata; importlib.metadata.version('omlx')"
+    system libexec/"bin/python", "-c", "import spacy; spacy.load('en_core_web_sm')" if build.with?("audio")
+    verify_custom_kernels(libexec/"bin/python") if build.with?("custom-kernel")
   end
 end
