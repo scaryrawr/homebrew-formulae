@@ -73,10 +73,10 @@ class Omlx < Formula
     # Build native extensions from source with headerpad so Homebrew can
     # rewrite Mach-O install names to absolute Cellar/opt paths. Rust/maturin
     # extension builds (cohere_melody, watchfiles) need the linker flag via
-    # RUSTFLAGS; C/C++ extension builds use LDFLAGS. tokenizers is excluded:
-    # its wheel ships a stable-ABI .abi3.so that does not need Homebrew's
-    # dylib ID rewrite, and building from source fails on macOS 15+ due to
-    # PyO3 linker errors (missing Python symbols at link time).
+    # RUSTFLAGS; C/C++ extension builds use LDFLAGS. Normally, tokenizers is
+    # excluded because its stable-ABI wheel does not need Homebrew's dylib ID
+    # rewrite and source builds fail on macOS 15+ due to PyO3 linker errors.
+    # macOS 27 requires the source-build exception below.
     ENV.append "LDFLAGS", "-Wl,-headerpad_max_install_names"
     ENV.append "RUSTFLAGS", "-C link-arg=-Wl,-headerpad_max_install_names"
     no_binary = "cohere_melody,nh3,pydantic-core,rpds-py,tiktoken,watchfiles"
@@ -128,7 +128,7 @@ class Omlx < Formula
              "sounddevice>=0.5.3",
              "misaki>=0.9.4",
              "num2words>=0.5.14",
-             "spacy>=3.8.4",
+             "spacy>=3.8.4,<3.9.0",
              "phonemizer-fork>=3.3.2",
              "espeakng-loader>=0.2.4",
              "webrtcvad>=2.0.10",
