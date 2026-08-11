@@ -97,7 +97,7 @@ class Omlx < Formula
       # custom kernels need full Xcode's separately shipped Metal compiler.
       developer_dir = MacOS::Xcode.prefix
       unless quiet_system "/usr/bin/env", "DEVELOPER_DIR=#{developer_dir}",
-                          "/usr/bin/xcrun", "metal", "--version"
+                          "/usr/bin/xcrun", "metal", "-help"
         odie "Metal compiler not found; install the Metal toolchain in Xcode Settings > Components"
       end
 
