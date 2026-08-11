@@ -17,12 +17,10 @@ class Omlx < Formula
   depends_on :macos
   depends_on "python@3.11"
 
-  # macOS 27 beta's `strip` corrupts dynamic offsets in Mach-O libraries
-  # (llvm/llvm-project#203678). Skip Homebrew's post-install clean pass over
-  # the venv so it never runs `strip` on the compiled dylibs.
-  on_golden_gate :or_newer do
-    skip_clean "libexec"
-  end
+  # Preserve native libraries in the venv from Homebrew's clean pass. This
+  # also avoids macOS 27's `strip` corrupting their Mach-O dynamic offsets
+  # (llvm/llvm-project#203678).
+  skip_clean "libexec"
 
   # Fetch source separately so the optional audio install stays pinned.
   resource "mlx-audio" do
