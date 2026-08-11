@@ -91,11 +91,26 @@ class Omlx < Formula
     ENV["PIP_NO_CACHE_DIR"] = "1"
 
     if build.with?("custom-kernel")
+      odie "--with-custom-kernel requires full Xcode with the Metal toolchain" unless MacOS::Xcode.installed?
+
+      # The standalone Command Line Tools can remain selected globally, but
+      # custom kernels need full Xcode's separately shipped Metal compiler.
+      developer_dir = MacOS::Xcode.prefix
+      unless quiet_system "/usr/bin/env", "DEVELOPER_DIR=#{developer_dir}",
+                          "/usr/bin/xcrun", "metal", "--version"
+        odie "Metal compiler not found; install the Metal toolchain in Xcode Settings > Components"
+      end
+
       kernel_sources = CUSTOM_KERNELS.map do |kernel|
         buildpath/"omlx/custom_kernels/#{kernel}/csrc"
       end
       unless kernel_sources.all?(&:directory?)
         odie "--with-custom-kernel requires oMLX custom kernel sources"
+      end
+      kernel_sources.each do |source|
+        # Homebrew's xcrun shim unsets DEVELOPER_DIR, which makes bare xcrun
+        # fall back to the globally selected CLT and hide Xcode's Metal tools.
+        inreplace source/"CMakeLists.txt", "xcrun", "/usr/bin/xcrun"
       end
 
       ENV["OMLX_WITH_CUSTOM_KERNEL"] = "1"
@@ -106,7 +121,12 @@ class Omlx < Formula
     extras << "image" if build.with?("image")
     extras << "grammar" if build.with?("grammar")
     install_spec = extras.empty? ? buildpath.to_s : "#{buildpath}[#{extras.join(",")}]"
-    system libexec/"bin/pip", "install", install_spec
+    if build.with?("custom-kernel")
+      system "/usr/bin/env", "DEVELOPER_DIR=#{MacOS::Xcode.prefix}",
+             libexec/"bin/pip", "install", install_spec
+    else
+      system libexec/"bin/pip", "install", install_spec
+    end
 
     if build.with?("custom-kernel")
       Dir.chdir(libexec) do
