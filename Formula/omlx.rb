@@ -20,8 +20,8 @@ class Omlx < Formula
   # macOS 27 beta's `strip` corrupts dynamic offsets in Mach-O libraries
   # (llvm/llvm-project#203678). Skip Homebrew's post-install clean pass over
   # the venv so it never runs `strip` on the compiled dylibs.
-  on_macos do
-    skip_clean "libexec" if MacOS.version >= "27"
+  on_golden_gate :or_newer do
+    skip_clean "libexec"
   end
 
   # Fetch source separately so the optional audio install stays pinned.
@@ -82,7 +82,7 @@ class Omlx < Formula
     ENV.append "LDFLAGS", "-Wl,-headerpad_max_install_names"
     ENV.append "RUSTFLAGS", "-C link-arg=-Wl,-headerpad_max_install_names"
     no_binary = "cohere_melody,nh3,pydantic-core,rpds-py,tiktoken,watchfiles"
-    if MacOS.version >= "27"
+    if MacOS.version >= :golden_gate
       # macOS 27's dyld rejects prebuilt Rust wheels whose LINKEDIT string
       # pool is only 4-byte aligned. Build tokenizers locally without strip.
       no_binary += ",tokenizers"
