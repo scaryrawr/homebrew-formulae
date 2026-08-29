@@ -1,20 +1,19 @@
 class Omlx < Formula
-  CUSTOM_KERNELS = %w[bonsai glm_moe_dsa minimax_m3 qwen35_prefill].freeze
+  CUSTOM_KERNELS = %w[bonsai decode_fast glm_moe_dsa minimax_m3 qwen35_prefill].freeze
 
   desc "LLM inference server optimized for Apple Silicon"
   homepage "https://github.com/scaryrawr/omlx"
   license "Apache-2.0"
   head "https://github.com/scaryrawr/omlx.git", branch: "main"
 
-  option "with-image", "Install mflux-backed image support"
   option "with-audio", "Install mlx-audio support"
   option "with-custom-kernel",
-         "Build native custom kernels for Bonsai, GLM-5.2, MiniMax M3 and Qwen3.5/3.6 acceleration"
+         "Build native custom kernels for Bonsai, GLM-5.2, MiniMax M3 and Qwen3.5/3.6/4 acceleration"
   option "with-grammar", "Install xgrammar for structured output (requires torch, ~2GB)"
 
   depends_on "rust" => :build
   depends_on arch: :arm64
-  depends_on :macos
+  depends_on macos: :sequoia
   depends_on "python@3.11"
 
   # Preserve native libraries in the venv from Homebrew's clean pass. This
@@ -114,11 +113,11 @@ class Omlx < Formula
       end
 
       ENV["OMLX_WITH_CUSTOM_KERNEL"] = "1"
-      ENV.append "CMAKE_ARGS", "-DPython_EXECUTABLE=#{libexec}/bin/python"
+      ENV.append "CMAKE_ARGS", "-DPython_EXECUTABLE=#{libexec}/bin/python " \
+                               "-DPython3_EXECUTABLE=#{libexec}/bin/python"
     end
 
     extras = []
-    extras << "image" if build.with?("image")
     extras << "grammar" if build.with?("grammar")
     install_spec = extras.empty? ? buildpath.to_s : "#{buildpath}[#{extras.join(",")}]"
     if build.with?("custom-kernel")
@@ -153,8 +152,12 @@ class Omlx < Formula
              "espeakng-loader>=0.2.4",
              "webrtcvad>=2.0.10",
              "setuptools<81",
-             "mistral-common[audio]>=1.10"
+             "mistral-common[audio]>=1.10",
+             "wsproto==1.2.0"
       resource("mlx-audio").stage do
+        inreplace "pyproject.toml",
+                  '"transformers>=5.5.0,<5.13.0"',
+                  '"transformers>=5.5.0"'
         system libexec/"bin/pip", "install", "--no-deps", "."
       end
 
@@ -164,8 +167,7 @@ class Omlx < Formula
       system libexec/"bin/python", "-c", "import spacy; spacy.load('en_core_web_sm')"
     end
 
-    # python-multipart is declared in omlx's [audio] extra, not in mlx-audio.
-    system libexec/"bin/pip", "install", "python-multipart>=0.0.5"
+    system libexec/"bin/pip", "check"
 
     site_packages = Utils.safe_popen_read(libexec/"bin/python", "-c",
       "import site; print(site.getsitepackages()[0])").chomp
