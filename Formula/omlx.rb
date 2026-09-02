@@ -23,8 +23,8 @@ class Omlx < Formula
 
   # Fetch source separately so the optional audio install stays pinned.
   resource "mlx-audio" do
-    url "https://github.com/Blaizzy/mlx-audio/archive/d28d68c6ac4e28f7d2d66007f640b06cf3fd8ceb.tar.gz"
-    sha256 "3d9742f7ef8ca7a83fe47c0cffc872c5809a1b8f853fa4457b4fb830cd06d7b4"
+    url "https://github.com/Blaizzy/mlx-audio/archive/6b54ec6ecd99d0ad77dfa33dd129707e31bf051c.tar.gz"
+    sha256 "ec19be4b992962e59b5d18f907de95cd48745aed7568c85d1c491ec74344ad6a"
   end
 
   # Kokoro's English G2P path uses misaki + spaCy. Bundle the spaCy
@@ -135,9 +135,8 @@ class Omlx < Formula
 
     # Install mlx-audio from the pinned source revision.
     if build.with?("audio")
-      # mlx-audio's current metadata conflicts with oMLX's newer transformers
-      # pin and omits several runtime dependencies, so mirror the fork's
-      # bundle dependency set and install mlx-audio itself without deps.
+      # Mirror the fork's bundle dependency set and install mlx-audio itself
+      # without deps so it cannot replace oMLX's pinned engine stack.
       system libexec/"bin/pip", "install",
              "scipy>=1.11.0",
              "librosa>=0.10.0",
@@ -155,9 +154,6 @@ class Omlx < Formula
              "mistral-common[audio]>=1.10",
              "wsproto==1.2.0"
       resource("mlx-audio").stage do
-        inreplace "pyproject.toml",
-                  '"transformers>=5.5.0,<5.13.0"',
-                  '"transformers>=5.5.0"'
         system libexec/"bin/pip", "install", "--no-deps", "."
       end
 
