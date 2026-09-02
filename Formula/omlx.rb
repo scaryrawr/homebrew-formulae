@@ -135,9 +135,8 @@ class Omlx < Formula
 
     # Install mlx-audio from the pinned source revision.
     if build.with?("audio")
-      # mlx-audio's current metadata conflicts with oMLX's newer transformers
-      # pin and omits several runtime dependencies, so mirror the fork's
-      # bundle dependency set and install mlx-audio itself without deps.
+      # Mirror the fork's bundle dependency set and install mlx-audio itself
+      # without deps so it cannot replace oMLX's pinned engine stack.
       system libexec/"bin/pip", "install",
              "scipy>=1.11.0",
              "librosa>=0.10.0",
