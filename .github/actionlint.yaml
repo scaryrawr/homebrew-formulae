@@ -11,7 +11,8 @@ config-variables:
   - GH_AW_RUNTIME_FEATURES
 
 paths:
-  .github/workflows/*.lock.yml:
+  "**/.github/workflows/update-omlx.lock.yml":
     ignore:
-      # gh-aw implements queued concurrency before actionlint recognizes it.
-      - 'unexpected key "queue" for "concurrency" section'
+      # The gh-aw compiler validates this generated workflow against its
+      # extended schema, which includes fields unknown to stock actionlint.
+      - ".*"
