@@ -54,6 +54,7 @@ safe-outputs:
     fallback-as-issue: false
     github-token-for-extra-empty-commit: ${{ secrets.GH_AW_CI_TRIGGER_TOKEN }}
   noop:
+    report-as-issue: false
 ---
 
 # Update the omlx Homebrew Formula
