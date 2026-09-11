@@ -183,106 +183,117 @@ class Omlx < Formula
                            "@loader_path/../../../sklearn/.dylibs/libomp.dylib"
     end
 
+    fixups = []
+    fixups << "grammar" if build.with?("grammar")
+    fixups << "custom-kernel" if build.with?("custom-kernel")
+    (libexec/"post-install-fixups").write fixups.join("\n")
+    (libexec/"post-install-custom-kernels").write CUSTOM_KERNELS.join("\n")
+    (libexec/"post-install.py").write <<~'PYTHON'
+      import glob
+      import pathlib
+      import re
+      import site
+      import subprocess
+      import sys
+
+      libexec = pathlib.Path(__file__).parent
+      enabled = set((libexec / "post-install-fixups").read_text().splitlines())
+      site_packages = pathlib.Path(site.getsitepackages()[0])
+
+      def output(*args):
+          return subprocess.run(args, check=True, text=True, stdout=subprocess.PIPE).stdout
+
+      if "grammar" in enabled:
+          print("Patching xgrammar macOS arm64 wheel")
+          import tvm_ffi
+
+          tvmlib = pathlib.Path(tvm_ffi.__file__).parent / "lib"
+          dylib = site_packages / "xgrammar/libxgrammar_bindings.dylib"
+          dist_dirs = glob.glob(str(site_packages / "xgrammar-*.dist-info"))
+          if not dylib.is_file():
+              raise RuntimeError(f"xgrammar dylib not found at {dylib}")
+          if not dist_dirs:
+              raise RuntimeError(f"xgrammar dist-info not found under {site_packages}")
+
+          otool_lines = output("/usr/bin/otool", "-l", dylib).splitlines()
+          rpaths = []
+          for index, line in enumerate(otool_lines):
+              if "cmd LC_RPATH" not in line:
+                  continue
+              path_line = next(
+                  (candidate for candidate in otool_lines[index:] if re.match(r"^\s*path ", candidate)),
+                  None,
+              )
+              if path_line:
+                  match = re.match(r"^\s*path (.+?) \(offset \d+\)", path_line)
+                  if match:
+                      rpaths.append(match.group(1))
+
+          if str(tvmlib) not in rpaths:
+              subprocess.run(
+                  ["/usr/bin/install_name_tool", "-add_rpath", str(tvmlib), str(dylib)],
+                  check=True,
+              )
+              subprocess.run(["/usr/bin/codesign", "--force", "--sign", "-", str(dylib)], check=True)
+
+          record = pathlib.Path(dist_dirs[0]) / "RECORD"
+          contents = record.read_text() if record.exists() else ""
+          if "libxgrammar_bindings.dylib" not in contents:
+              with record.open("a") as file:
+                  if contents and not contents.endswith("\n"):
+                      file.write("\n")
+                  file.write("xgrammar/libxgrammar_bindings.dylib,,\n")
+
+          subprocess.run([sys.executable, "-c", "import xgrammar"], check=True)
+
+      if "custom-kernel" in enabled:
+          print("Adding mlx rpath to custom kernel binaries")
+          import mlx.core
+
+          mlx_lib = pathlib.Path(mlx.core.__file__).parent / "lib"
+          if not mlx_lib.is_dir():
+              raise RuntimeError(f"mlx lib dir not found at {mlx_lib}")
+          binaries = [
+              *site_packages.glob("omlx/custom_kernels/*/_ext*.so"),
+              *site_packages.glob("omlx/custom_kernels/*/lib*_kernel_ops.dylib"),
+          ]
+          if not binaries:
+              raise RuntimeError(f"no custom kernel binaries under {site_packages}/omlx/custom_kernels")
+
+          for binary in binaries:
+              if str(mlx_lib) in output("/usr/bin/otool", "-l", binary):
+                  continue
+              subprocess.run(
+                  ["/usr/bin/install_name_tool", "-add_rpath", str(mlx_lib), str(binary)],
+                  check=True,
+              )
+              subprocess.run(["/usr/bin/codesign", "--force", "--sign", "-", str(binary)], check=True)
+
+          custom_kernels = (libexec / "post-install-custom-kernels").read_text().splitlines()
+          for package in custom_kernels:
+              subprocess.run(
+                  [
+                      sys.executable,
+                      "-c",
+                      (
+                          f"from omlx.custom_kernels.{package} import fast; "
+                          "assert fast.is_native_available(), fast.import_error()"
+                      ),
+                  ],
+                  check=True,
+              )
+    PYTHON
+
     bin.install_symlink libexec/"bin/omlx"
   end
 
-  # Both fixups below must run in post_install because Homebrew's cleaning
-  # pass rewrites Mach-O install names and removes wheel RECORD files.
-  def post_install
-    return if build.without?("grammar") && build.without?("custom-kernel")
-
-    python = libexec/"bin/python"
-    site = Utils.safe_popen_read(python, "-c",
-                                 "import site; print(site.getsitepackages()[0])").chomp
-    patch_xgrammar(python, site) if build.with?("grammar")
-    fix_custom_kernel_rpaths(python, site) if build.with?("custom-kernel")
-  end
-
-  # Patch the macOS arm64 xgrammar wheel so its native binding loads.
-  # The 0.1.32+ wheel ships libxgrammar_bindings.dylib with
-  # @rpath/libtvm_ffi.dylib but no LC_RPATH pointing at where tvm_ffi
-  # installs its native lib, and the dist-info is missing a RECORD
-  # entry for the dylib so tvm_ffi's manifest-based lookup fails.
-  # Both manifest as RuntimeError("Cannot find library: ...") at
-  # `import xgrammar`, which crashes /admin/api/grammar/parsers and
-  # hides the Reasoning Parser dropdown.
-  def patch_xgrammar(python, site)
-    ohai "Patching xgrammar macOS arm64 wheel"
-    tvmlib = Utils.safe_popen_read(python, "-c",
-      "import os, tvm_ffi; print(os.path.join(os.path.dirname(tvm_ffi.__file__), 'lib'))").chomp
-    dylib = "#{site}/xgrammar/libxgrammar_bindings.dylib"
-    dist_dirs = Dir["#{site}/xgrammar-*.dist-info"]
-
-    ohai "  site=#{site}"
-    ohai "  tvmlib=#{tvmlib}"
-    ohai "  dylib=#{dylib} (exists? #{File.exist?(dylib)})"
-    ohai "  dist-info=#{dist_dirs.inspect}"
-
-    odie "xgrammar dylib not found at #{dylib}" unless File.exist?(dylib)
-    odie "xgrammar dist-info not found under #{site}" if dist_dirs.empty?
-
-    # Patch 1: add tvm_ffi/lib to the dylib's rpath, then re-codesign so
-    # macOS will load the modified dylib.
-    otool_lines = Utils.safe_popen_read("/usr/bin/otool", "-l", dylib).lines
-    rpaths = []
-    otool_lines.each_with_index do |line, index|
-      next unless line.include?("cmd LC_RPATH")
-
-      path_line = otool_lines[index..].find { |candidate| candidate.match?(/^\s*path /) }
-      rpaths << path_line[/^\s*path (.+?) \(offset \d+\)/, 1] if path_line
+  # These fixups must run after Homebrew's cleaning pass rewrites Mach-O
+  # install names and removes wheel RECORD files.
+  post_install_steps do
+    if_path_exists "{{libexec}}/post-install.py" do
+      run "{{libexec}}/bin/python", args: ["{{libexec}}/post-install.py"], writable_paths: ["{{libexec}}"],
+                                print_stdout: true
     end
-    if rpaths.include?(tvmlib)
-      ohai "  rpath already points at tvm_ffi/lib"
-    else
-      ohai "  adding rpath -> #{tvmlib}"
-      system "/usr/bin/install_name_tool", "-add_rpath", tvmlib, dylib
-      system "/usr/bin/codesign", "--force", "--sign", "-", dylib
-    end
-
-    # Patch 2: ensure RECORD lists the dylib so tvm_ffi's manifest-based
-    # lookup finds it. Brew's clean pass already deleted every RECORD by
-    # the time post_install runs, so we always (re)create one.
-    record = "#{dist_dirs.first}/RECORD"
-    if File.exist?(record) && File.read(record).include?("libxgrammar_bindings.dylib")
-      ohai "  RECORD already lists the dylib"
-    else
-      ohai "  writing dylib entry to #{record}"
-      contents = File.exist?(record) ? File.read(record) : ""
-      File.open(record, "a") do |f|
-        f.write "\n" if !contents.empty? && !contents.end_with?("\n")
-        f.puts "xgrammar/libxgrammar_bindings.dylib,,"
-      end
-    end
-
-    # Verify the patch took. Failing here is much less confusing than
-    # the user discovering it later via a 500 from the admin route.
-    ohai "  verifying import xgrammar..."
-    system python, "-c", "import xgrammar; print('xgrammar import OK')"
-  end
-
-  # Homebrew rewrites libmlx's dylib ID after install, so custom kernels need
-  # an rpath to the final mlx library directory added after that clean pass.
-  def fix_custom_kernel_rpaths(python, site)
-    ohai "Adding mlx rpath to custom kernel binaries"
-    mlx_lib = Utils.safe_popen_read(python, "-c",
-      "import os, mlx.core; print(os.path.join(os.path.dirname(mlx.core.__file__), 'lib'))").chomp
-    odie "mlx lib dir not found at #{mlx_lib}" unless File.directory?(mlx_lib)
-    binaries = Dir["#{site}/omlx/custom_kernels/*/{_ext*.so,lib*_kernel_ops.dylib}"]
-    odie "no custom kernel binaries under #{site}/omlx/custom_kernels" if binaries.empty?
-
-    binaries.each do |binary|
-      if Utils.safe_popen_read("/usr/bin/otool", "-l", binary).include?(mlx_lib)
-        ohai "  #{File.basename(binary)}: mlx rpath already present"
-        next
-      end
-
-      ohai "  adding rpath to #{File.basename(binary)}"
-      system "/usr/bin/install_name_tool", "-add_rpath", mlx_lib, binary
-      system "/usr/bin/codesign", "--force", "--sign", "-", binary
-    end
-
-    ohai "  verifying custom kernel imports..."
-    verify_custom_kernels(python)
   end
 
   def verify_custom_kernels(python)
