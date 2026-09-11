@@ -36,6 +36,8 @@ tools:
     - "curl:*"
     - "gh api:*"
     - "git diff:*"
+    - "git log:*"
+    - "git rev-parse:*"
     - "git status:*"
     - "grep:*"
     - "ruby:*"
