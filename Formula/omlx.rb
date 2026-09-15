@@ -92,12 +92,30 @@ class Omlx < Formula
     if build.with?("custom-kernel")
       odie "--with-custom-kernel requires full Xcode with the Metal toolchain" unless MacOS::Xcode.installed?
 
-      # The standalone Command Line Tools can remain selected globally, but
-      # custom kernels need full Xcode's separately shipped Metal compiler.
       developer_dir = MacOS::Xcode.prefix
-      unless quiet_system "/usr/bin/env", "DEVELOPER_DIR=#{developer_dir}",
-                          "/usr/bin/xcrun", "metal", "-help"
-        odie "Metal compiler not found; install the Metal toolchain in Xcode Settings > Components"
+      metal_compiler = buildpath/"metal"
+      if quiet_system "/usr/bin/env", "DEVELOPER_DIR=#{developer_dir}",
+                      "/usr/bin/xcrun", "metal", "-help"
+        metal_compiler.write <<~SH
+          #!/bin/sh
+          exec /usr/bin/env DEVELOPER_DIR="#{developer_dir}" /usr/bin/xcrun -sdk macosx metal "$@"
+        SH
+        chmod 0755, metal_compiler
+      else
+        # Xcode keeps separately downloaded Metal toolchains mounted here.
+        # Use them directly when xcrun is blocked by a newly updated Xcode
+        # whose license has not yet been accepted.
+        user_home = Dir.home(ENV.fetch("USER"))
+        metal = Dir[
+          "#{user_home}/Library/Developer/DVTDownloads/MetalToolchain/" \
+          "mounts/*/Metal.xctoolchain/usr/bin/metal",
+        ].select { |candidate| quiet_system candidate, "-help" }.max_by do |candidate|
+          File.mtime(candidate)
+        end
+        if metal.blank?
+          odie "Metal compiler not found; install the Metal toolchain in Xcode Settings > Components"
+        end
+        ln_s metal, metal_compiler
       end
 
       kernel_sources = CUSTOM_KERNELS.map do |kernel|
@@ -107,9 +125,9 @@ class Omlx < Formula
         odie "--with-custom-kernel requires oMLX custom kernel sources"
       end
       kernel_sources.each do |source|
-        # Homebrew's xcrun shim unsets DEVELOPER_DIR, which makes bare xcrun
-        # fall back to the globally selected CLT and hide Xcode's Metal tools.
-        inreplace source/"CMakeLists.txt", "xcrun", "/usr/bin/xcrun"
+        inreplace source/"CMakeLists.txt",
+                  "xcrun -sdk macosx metal",
+                  metal_compiler.to_s
       end
 
       ENV["OMLX_WITH_CUSTOM_KERNEL"] = "1"
@@ -120,12 +138,7 @@ class Omlx < Formula
     extras = []
     extras << "grammar" if build.with?("grammar")
     install_spec = extras.empty? ? buildpath.to_s : "#{buildpath}[#{extras.join(",")}]"
-    if build.with?("custom-kernel")
-      system "/usr/bin/env", "DEVELOPER_DIR=#{MacOS::Xcode.prefix}",
-             libexec/"bin/pip", "install", install_spec
-    else
-      system libexec/"bin/pip", "install", install_spec
-    end
+    system libexec/"bin/pip", "install", install_spec
 
     if build.with?("custom-kernel")
       Dir.chdir(libexec) do
