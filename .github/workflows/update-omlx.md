@@ -78,6 +78,9 @@ The formula is intentionally HEAD-only and must remain pointed at the
    - the formula shipped in the omlx repository, when present
 4. Compare those requirements with the local formula.
 
+Run Git commands directly rather than wrapping them in shell commands, so they
+match the workflow's `git:*` tool permission.
+
 Pay particular attention to:
 
 - Exact `mlx`, `mlx-lm`, `mlx-vlm`, `mlx-audio`, and image-engine pins.
