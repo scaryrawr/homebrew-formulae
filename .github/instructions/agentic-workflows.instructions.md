@@ -11,6 +11,8 @@ applyTo: ".github/workflows/*.md,.github/workflows/*.lock.yml,.github/aw/actions
   `v0.87.10`), unless intentionally upgrading the workflow runtime. Check the
   binary's `version` output before running `compile update-omlx --no-check-update`.
   Use a separately downloaded release binary if the installed extension differs.
+  When upgrading, also update the pinned compiler URL and checksum in
+  `.github/workflows/tests.yml`.
 - Inspect the generated diff: a permissions-only change should retain the
   SHA-pinned setup action, compiler version, and 168-hour failure-issue retention.
   A `dev` version or unpinned `github/gh-aw` checkout indicates compiler drift.

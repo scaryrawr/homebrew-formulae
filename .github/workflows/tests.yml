@@ -7,6 +7,31 @@ on:
   pull_request:
 
 jobs:
+  agentic-workflow-lock:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check agentic workflow locks
+        run: |
+          curl --fail --location --silent --show-error \
+            https://github.com/github/gh-aw/releases/download/v0.87.10/linux-amd64 \
+            --output "$RUNNER_TEMP/gh-aw"
+          echo "1624fb3a6e93b48046377c7b26c9b326e2b25056b3f36cc3fd3bf0ebee7d59fd  $RUNNER_TEMP/gh-aw" | sha256sum --check
+          chmod +x "$RUNNER_TEMP/gh-aw"
+          for workflow in .github/workflows/*.md; do
+            "$RUNNER_TEMP/gh-aw" compile "$workflow" --no-check-update
+          done
+          git diff --exit-code -- .github/workflows/ .github/aw/actions-lock.json
+          untracked_locks="$(git ls-files --others --exclude-standard -- '.github/workflows/*.lock.yml')"
+          if [ -n "$untracked_locks" ]; then
+            echo "Commit the generated workflow locks:"
+            echo "$untracked_locks"
+            exit 1
+          fi
+
   test-bot:
     strategy:
       matrix:
