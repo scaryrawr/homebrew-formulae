@@ -23,8 +23,8 @@ class Omlx < Formula
 
   # Fetch source separately so the optional audio install stays pinned.
   resource "mlx-audio" do
-    url "https://github.com/Blaizzy/mlx-audio/archive/3acb58fbdc10f04c4bfdbec51ffbc8de3e038cca.tar.gz"
-    sha256 "f746bb47f25ca2804cf3d9ce8037ecad67251881aed21c04cff39ef5c85ac658"
+    url "https://github.com/Blaizzy/mlx-audio/archive/94c7716212b2228f178d2f9c7619a591fd1b0b78.tar.gz"
+    sha256 "7150ba2e58b791399d7aefb81f15d206bd1aa018aa99861f90583cf3d58fd507"
   end
 
   # Kokoro's English G2P path uses misaki + spaCy. Bundle the spaCy
@@ -163,6 +163,7 @@ class Omlx < Formula
              "phonemizer-fork>=3.3.2",
              "espeakng-loader>=0.2.4",
              "webrtcvad>=2.0.10",
+             "zstandard>=0.23.0",
              "setuptools<81",
              "mistral-common[audio]>=1.10",
              "wsproto==1.2.0"
