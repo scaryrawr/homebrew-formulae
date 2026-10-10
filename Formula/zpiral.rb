@@ -20,4 +20,8 @@ class Zpiral < Formula
     log_path var/"log/zpiral.log"
     error_log_path var/"log/zpiral.log"
   end
+
+  test do
+    assert_predicate bin/"zpiral", :executable?
+  end
 end

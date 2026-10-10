@@ -28,4 +28,8 @@ class Magus < Formula
   def install
     bin.install "bin/magus"
   end
+
+  test do
+    assert_predicate bin/"magus", :executable?
+  end
 end
