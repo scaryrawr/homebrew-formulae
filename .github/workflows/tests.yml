@@ -59,21 +59,22 @@ jobs:
 
       - run: brew test-bot --only-setup
 
+      - name: Test formula CI routing
+        run: python3 -m unittest discover -s tests
+
       - run: brew test-bot --only-tap-syntax
 
+      - name: Detect formula changes
+        id: formulae
+        run: brew test-bot --only-formulae-detect
+        if: github.event_name == 'pull_request'
+
       - name: Run formula tests
-        run: |
-          changed_formulae="$(git diff --name-only origin/main...HEAD -- 'Formula/*.rb')"
-          if [[ "${changed_formulae}" == "Formula/omlx.rb" ]]; then
-            if [[ "${RUNNER_OS}" == "macOS" ]]; then
-              brew install --HEAD --build-from-source scaryrawr/formulae/omlx
-              brew test omlx
-            else
-              echo "Skipping head-only macOS formula omlx on ${RUNNER_OS}"
-            fi
-          else
-            brew test-bot --only-formulae
-          fi
+        env:
+          TESTING_FORMULAE: ${{ steps.formulae.outputs.testing_formulae }}
+          ADDED_FORMULAE: ${{ steps.formulae.outputs.added_formulae }}
+          DELETED_FORMULAE: ${{ steps.formulae.outputs.deleted_formulae }}
+        run: bash scripts/test-formulae.sh
         if: github.event_name == 'pull_request'
 
       - name: Upload bottles as artifact

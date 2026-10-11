@@ -6,7 +6,7 @@ class Zpiral < Formula
   license "MIT"
   head "https://github.com/scaryrawr/zpiral.git", branch: "main"
 
-  depends_on "zig" => :build
+  depends_on "zig@0.15" => :build
   depends_on :macos
 
   def install
@@ -19,5 +19,9 @@ class Zpiral < Formula
     working_dir var
     log_path var/"log/zpiral.log"
     error_log_path var/"log/zpiral.log"
+  end
+
+  test do
+    assert_predicate bin/"zpiral", :executable?
   end
 end
