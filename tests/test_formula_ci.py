@@ -53,7 +53,7 @@ class FormulaCITest(unittest.TestCase):
         self.assertEqual(commands, [
             ["test-bot", "--only-formulae", "--testing-formulae=zpiral,sl",
              "--added-formulae=sl", "--deleted-formulae=magus"],
-            ["install", "--HEAD", "--build-from-source",
+            ["install", "--HEAD", "--build-from-source", "--with-audio",
              "scaryrawr/formulae/omlx"],
             ["test", "omlx"],
         ])
@@ -65,6 +65,7 @@ class FormulaCITest(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual([command[0] for command in commands],
                                  ["install", "test"])
+                self.assertIn("--with-audio", commands[0])
 
     def test_unsupported_runners_still_test_stable_formulae(self):
         for os_name, arch in (("Linux", "X64"), ("macOS", "X64")):
