@@ -27,4 +27,11 @@ executable without starting the hardware-dependent multitouch daemon.
 
 PR CI uses Homebrew's formula-change detection and tests stable formulae with
 `brew test-bot`. Head-only `omlx` is built and tested separately on Apple Silicon
-macOS runners, including when a PR also changes stable formulae.
+macOS runners with `--with-audio`, including when a PR also changes stable
+formulae. The formula uses Python 3.11 because Misaki, required for audio, does
+not support Python 3.13.
+
+To reinstall head-only `omlx`, use `brew reinstall scaryrawr/formulae/omlx`
+without `--HEAD`; Homebrew preserves the installed build options. If virtualenv
+creation fails before pip runs, verify the Homebrew Python executable works and
+repair an incomplete Python installation with `brew reinstall python@3.11`.

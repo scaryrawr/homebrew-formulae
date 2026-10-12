@@ -14,7 +14,8 @@ class Omlx < Formula
   depends_on "rust" => :build
   depends_on arch: :arm64
   depends_on macos: :sequoia
-  depends_on "python@3.13"
+  # Misaki, required by --with-audio, does not support Python 3.13.
+  depends_on "python@3.11"
 
   # Preserve native libraries in the venv from Homebrew's clean pass. This
   # also avoids macOS 27's `strip` corrupting their Mach-O dynamic offsets
@@ -67,7 +68,7 @@ class Omlx < Formula
     ENV["PIP_INDEX_URL"] = ENV["HOMEBREW_PIP_INDEX_URL"] if ENV["HOMEBREW_PIP_INDEX_URL"].present?
 
     # Create venv with pip so dependency resolution works properly.
-    system "python3.13", "-m", "venv", libexec
+    system "python3.11", "-m", "venv", libexec
 
     # Build native extensions from source with headerpad so Homebrew can
     # rewrite Mach-O install names to absolute Cellar/opt paths. Rust/maturin
@@ -192,7 +193,7 @@ class Omlx < Formula
                          "@rpath/libjaccl.dylib",
                          "@loader_path/libjaccl.dylib"
     if build.with?("audio")
-      rewrite_install_name "#{site_packages}/numba/np/ufunc/omppool.cpython-313-darwin.so",
+      rewrite_install_name "#{site_packages}/numba/np/ufunc/omppool.cpython-311-darwin.so",
                            "@rpath/libomp.dylib",
                            "@loader_path/../../../sklearn/.dylibs/libomp.dylib"
     end
@@ -324,9 +325,11 @@ class Omlx < Formula
 
   test do
     assert_match "serve", shell_output("#{bin}/omlx --help")
-    system libexec/"bin/python", "-c", "import sys; assert sys.version_info[:2] == (3, 13)"
+    system libexec/"bin/python", "-c", "import sys; assert sys.version_info[:2] == (3, 11)"
     system libexec/"bin/python", "-c", "import importlib.metadata; importlib.metadata.version('omlx')"
-    system libexec/"bin/python", "-c", "import spacy; spacy.load('en_core_web_sm')" if build.with?("audio")
+    if build.with?("audio")
+      system libexec/"bin/python", "-c", "from misaki import en; import spacy; spacy.load('en_core_web_sm')"
+    end
     verify_custom_kernels(libexec/"bin/python") if build.with?("custom-kernel")
   end
 end

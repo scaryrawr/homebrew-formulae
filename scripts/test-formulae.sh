@@ -33,7 +33,7 @@ if [[ ",${TESTING_FORMULAE}," == *,omlx,* || ",${TESTING_FORMULAE}," == *,scaryr
 then
   if [[ "${RUNNER_OS?}" == "macOS" && "${RUNNER_ARCH?}" == "ARM64" ]]
   then
-    brew install --HEAD --build-from-source scaryrawr/formulae/omlx
+    brew install --HEAD --build-from-source --with-audio scaryrawr/formulae/omlx
     brew test omlx
   else
     echo "Skipping head-only Apple Silicon formula omlx on ${RUNNER_OS}/${RUNNER_ARCH}"
