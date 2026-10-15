@@ -67,6 +67,8 @@ class Omlx < Formula
     # its supported package-index setting to pip and build-isolation subprocesses.
     ENV["PIP_INDEX_URL"] = ENV["HOMEBREW_PIP_INDEX_URL"] if ENV["HOMEBREW_PIP_INDEX_URL"].present?
 
+    setup_custom_kernels if build.with?("custom-kernel")
+
     # Create venv with pip so dependency resolution works properly.
     system "python3.11", "-m", "venv", libexec
 
@@ -89,52 +91,6 @@ class Omlx < Formula
     end
     ENV["PIP_NO_BINARY"] = no_binary
     ENV["PIP_NO_CACHE_DIR"] = "1"
-
-    if build.with?("custom-kernel")
-      odie "--with-custom-kernel requires full Xcode with the Metal toolchain" unless MacOS::Xcode.installed?
-
-      developer_dir = MacOS::Xcode.prefix
-      metal_compiler = buildpath/"metal"
-      if quiet_system "/usr/bin/env", "DEVELOPER_DIR=#{developer_dir}",
-                      "/usr/bin/xcrun", "metal", "-help"
-        metal_compiler.write <<~SH
-          #!/bin/sh
-          exec /usr/bin/env DEVELOPER_DIR="#{developer_dir}" /usr/bin/xcrun -sdk macosx metal "$@"
-        SH
-        chmod 0755, metal_compiler
-      else
-        # Xcode keeps separately downloaded Metal toolchains mounted here.
-        # Use them directly when xcrun is blocked by a newly updated Xcode
-        # whose license has not yet been accepted.
-        user_home = Dir.home(ENV.fetch("USER"))
-        metal = Dir[
-          "#{user_home}/Library/Developer/DVTDownloads/MetalToolchain/" \
-          "mounts/*/Metal.xctoolchain/usr/bin/metal",
-        ].select { |candidate| quiet_system candidate, "-help" }.max_by do |candidate|
-          File.mtime(candidate)
-        end
-        if metal.blank?
-          odie "Metal compiler not found; install the Metal toolchain in Xcode Settings > Components"
-        end
-        ln_s metal, metal_compiler
-      end
-
-      kernel_sources = CUSTOM_KERNELS.map do |kernel|
-        buildpath/"omlx/custom_kernels/#{kernel}/csrc"
-      end
-      unless kernel_sources.all?(&:directory?)
-        odie "--with-custom-kernel requires oMLX custom kernel sources"
-      end
-      kernel_sources.each do |source|
-        inreplace source/"CMakeLists.txt",
-                  "xcrun -sdk macosx metal",
-                  metal_compiler.to_s
-      end
-
-      ENV["OMLX_WITH_CUSTOM_KERNEL"] = "1"
-      ENV.append "CMAKE_ARGS", "-DPython_EXECUTABLE=#{libexec}/bin/python " \
-                               "-DPython3_EXECUTABLE=#{libexec}/bin/python"
-    end
 
     extras = []
     extras << "grammar" if build.with?("grammar")
@@ -302,6 +258,62 @@ class Omlx < Formula
     bin.install_symlink libexec/"bin/omlx"
   end
 
+  def setup_custom_kernels
+    CUSTOM_KERNELS.each do |kernel|
+      source = buildpath/"omlx/custom_kernels/#{kernel}/csrc"
+      odie "--with-custom-kernel requires #{source}/bindings.cpp" unless (source/"bindings.cpp").file?
+      odie "--with-custom-kernel requires Metal sources in #{source}" if source.glob("*.metal").empty?
+    end
+
+    odie "--with-custom-kernel requires full Xcode with the Metal toolchain" unless MacOS::Xcode.installed?
+
+    developer_dir = MacOS::Xcode.prefix
+    toolchain_bin = buildpath/"homebrew-toolchain"
+    toolchain_bin.mkpath
+    metal_compiler = toolchain_bin/"metal"
+    if quiet_system "/usr/bin/env", "DEVELOPER_DIR=#{developer_dir}",
+                    "/usr/bin/xcrun", "-sdk", "macosx", "metal", "-help"
+      metal_compiler.write <<~SH
+        #!/bin/sh
+        exec /usr/bin/env #{("DEVELOPER_DIR=" + developer_dir.to_s).shellescape} /usr/bin/xcrun -sdk macosx metal "$@"
+      SH
+      chmod 0755, metal_compiler
+    else
+      # Preserve the mounted Metal toolchain fallback when Xcode's xcrun
+      # cannot invoke Metal (for example, after an Xcode update).
+      user_home = Dir.home(ENV.fetch("USER"))
+      metal = Dir[
+        "#{user_home}/Library/Developer/DVTDownloads/MetalToolchain/" \
+        "mounts/*/Metal.xctoolchain/usr/bin/metal",
+      ].select { |candidate| quiet_system candidate, "-help" }.max_by do |candidate|
+        File.mtime(candidate)
+      end
+      odie "Metal compiler not found; install the Metal toolchain in Xcode Settings > Components" if metal.blank?
+
+      ln_s metal, metal_compiler
+    end
+
+    # MLX MetalExtension generates its own CMake files and invokes xcrun
+    # by name; adapt only this build instead of patching MLX or its sources.
+    (toolchain_bin/"xcrun").write <<~SH
+      #!/bin/sh
+      if [ "$#" -ge 3 ] && [ "$1" = "-sdk" ] && [ "$2" = "macosx" ] && [ "$3" = "metal" ]; then
+        shift 3
+        exec #{metal_compiler.to_s.shellescape} "$@"
+      fi
+      for arg do
+        if [ "$arg" = "metal" ]; then
+          echo "Unsupported oMLX build xcrun Metal invocation: $*" >&2
+          exit 64
+        fi
+      done
+      exec /usr/bin/env #{("DEVELOPER_DIR=" + developer_dir.to_s).shellescape} /usr/bin/xcrun "$@"
+    SH
+    chmod 0755, toolchain_bin/"xcrun"
+    ENV.prepend_path "PATH", toolchain_bin
+    ENV["OMLX_WITH_CUSTOM_KERNEL"] = "1"
+  end
+
   # These fixups must run after Homebrew's cleaning pass rewrites Mach-O
   # install names and removes wheel RECORD files.
   post_install_steps do
@@ -314,9 +326,21 @@ class Omlx < Formula
   def verify_custom_kernels(python)
     system python, "-c", <<~PYTHON
       import importlib
+      from pathlib import Path
+
+      libraries = {
+          "bonsai": "omlx_bonsai_kernels",
+          "decode_fast": "omlx_decode_fast_kernels",
+          "glm_moe_dsa": "omlx_glm_kernels",
+          "minimax_m3": "omlx_minimax_m3_kernels",
+          "qwen35_prefill": "omlx_qwen35_prefill_kernels",
+      }
       failed = {}
       for package in #{CUSTOM_KERNELS.inspect}:
           fast = importlib.import_module(f"omlx.custom_kernels.{package}.fast")
+          metallib = Path(fast.__file__).parent / f"{libraries[package]}.metallib"
+          if not metallib.is_file():
+              failed[package] = f"Metal library not found: {metallib}"
           if not fast.is_native_available():
               failed[package] = str(fast.import_error())
       assert not failed, failed
