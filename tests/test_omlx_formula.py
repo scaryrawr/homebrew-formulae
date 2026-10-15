@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+import shlex
 import shutil
 import subprocess
 import sys
@@ -169,40 +170,70 @@ class OmlxFormulaTest(unittest.TestCase):
             self.assertEqual(run.returncode, 64)
             self.assertIn("Unsupported", run.stderr)
 
+    def selected_developer_environment(self):
+        env = os.environ.copy()
+        if not env.get("DEVELOPER_DIR"):
+            selected = subprocess.run(
+                ["/usr/bin/xcode-select", "-p"], check=True,
+                capture_output=True, text=True,
+            )
+            env["DEVELOPER_DIR"] = selected.stdout.strip()
+        return env
+
+    def test_harness_accepts_renamed_xcode_without_installing_it(self):
+        developer_dir = "/Applications/Xcode Custom.app/Contents/Developer"
+        result, _ = self.run_formula(
+            method="setup_custom_kernels", TEST_DEVELOPER_DIR=developer_dir,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        metal = self.root / "source/homebrew-toolchain/metal"
+        command = shlex.split(metal.read_text().splitlines()[1])
+        self.assertIn(f"DEVELOPER_DIR={developer_dir}", command)
+
     def test_native_shim_and_non_metal_forwarding(self):
         if sys.platform != "darwin":
             self.skipTest("requires the macOS xcrun tool")
-        result, _ = self.run_formula(method="setup_custom_kernels")
+        env = self.selected_developer_environment()
+        result, _ = self.run_formula(
+            method="setup_custom_kernels",
+            TEST_DEVELOPER_DIR=env["DEVELOPER_DIR"],
+            DEVELOPER_DIR=env["DEVELOPER_DIR"],
+        )
         self.assertEqual(result.returncode, 0, result.stderr)
         shim = self.root / "source/homebrew-toolchain/xcrun"
         metal = subprocess.run(
             [str(shim), "-sdk", "macosx", "metal", "-help"],
-            capture_output=True, text=True,
+            capture_output=True, text=True, env=env,
         )
         direct_metal = subprocess.run(
             ["/usr/bin/xcrun", "-sdk", "macosx", "metal", "-help"],
-            capture_output=True, text=True,
+            capture_output=True, text=True, env=env,
         )
         self.assertEqual(metal.returncode, direct_metal.returncode)
         for args in (["-sdk", "macosx", "--show-sdk-version"],
                      ["--omlx-invalid-option"]):
             direct = subprocess.run(["/usr/bin/xcrun", *args],
-                                    capture_output=True, text=True)
+                                    capture_output=True, text=True, env=env)
             adapted = subprocess.run([str(shim), *args], capture_output=True,
-                                     text=True)
+                                     text=True, env=env)
             self.assertEqual(adapted.returncode, direct.returncode)
             self.assertEqual(adapted.stdout, direct.stdout)
 
     def test_native_adapter_compiles_and_links_real_metal(self):
         if sys.platform != "darwin":
             self.skipTest("requires the macOS Metal compiler")
+        env = self.selected_developer_environment()
         probe = subprocess.run(
             ["/usr/bin/xcrun", "-sdk", "macosx", "metal", "-help"],
-            capture_output=True,
+            capture_output=True, env=env,
         )
         if probe.returncode:
             self.skipTest("Metal compiler is not installed")
-        result, _ = self.run_formula(method="setup_custom_kernels")
+        result, _ = self.run_formula(
+            method="setup_custom_kernels",
+            TEST_DEVELOPER_DIR=env["DEVELOPER_DIR"],
+            DEVELOPER_DIR=env["DEVELOPER_DIR"],
+        )
         self.assertEqual(result.returncode, 0, result.stderr)
         shim = self.root / "source/homebrew-toolchain/xcrun"
         source = self.root / "smoke.metal"
@@ -217,7 +248,7 @@ class OmlxFormulaTest(unittest.TestCase):
                      [str(air), "-o", str(metallib)]):
             run = subprocess.run(
                 [str(shim), "-sdk", "macosx", "metal", *args],
-                capture_output=True, text=True,
+                capture_output=True, text=True, env=env,
             )
             self.assertEqual(run.returncode, 0, run.stderr)
         self.assertGreater(metallib.stat().st_size, 0)

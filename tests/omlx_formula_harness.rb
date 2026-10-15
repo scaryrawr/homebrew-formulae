@@ -1,157 +1,177 @@
+# typed: strict
+# frozen_string_literal: true
+
 require "fileutils"
 require "json"
-require "pathname"
 require "shellwords"
 
-class Object
-  def blank?
-    respond_to?(:empty?) ? empty? : !self
+autoload :Pathname, "pathname"
+
+# Runs the real formula methods without an installed Homebrew tap.
+module OmlxFormulaHarness
+  # Supplies the Homebrew presence predicates used by formula methods.
+  module ObjectExtensions
+    def blank?
+      respond_to?(:empty?) ? empty? : !self
+    end
+
+    def present?
+      !blank?
+    end
   end
 
-  def present?
-    !blank?
-  end
-end
+  class << ENV
+    def append(key, value)
+      self[key] = [self[key], value].compact.join(" ")
+    end
 
-class << ENV
-  def append(key, value)
-    self[key] = [self[key], value].compact.join(" ")
+    def prepend_path(key, value)
+      self[key] = "#{value}#{File::PATH_SEPARATOR}#{self[key]}"
+    end
   end
 
-  def prepend_path(key, value)
-    self[key] = "#{value}#{File::PATH_SEPARATOR}#{self[key]}"
+  # Keeps formula bin links inside the fixture prefix.
+  module PathExtensions
+    def install_symlink(source)
+      mkpath
+      FileUtils.ln_s(source, self / source.basename)
+    end
   end
-end
 
-class Pathname
-  def install_symlink(source)
-    mkpath
-    FileUtils.ln_s(source, self / source.basename)
-  end
-end
+  # Models macOS build metadata independently of the host operating system.
+  module MacOS
+    def self.version
+      Object.new.tap do |version|
+        version.define_singleton_method(:>=) { |_other| true }
+      end
+    end
 
-module MacOS
-  def self.version
-    Object.new.tap do |version|
-      def version.>=(other)
-        true
+    # Allows real-toolchain tests to select their actual developer directory.
+    module Xcode
+      def self.installed?
+        ENV["TEST_XCODE"] != "missing"
+      end
+
+      def self.prefix
+        Pathname.new(ENV.fetch("TEST_DEVELOPER_DIR", "/Applications/Xcode.app/Contents/Developer"))
       end
     end
   end
 
-  module Xcode
-    def self.installed?
-      ENV["TEST_XCODE"] != "missing"
+  # Returns fixture paths instead of invoking installed Homebrew utilities.
+  module Utils
+    def self.safe_popen_read(*args)
+      return "#{ENV.fetch("TEST_ROOT")}/prefix/libexec/site-packages\n" if args.include?("-c")
+
+      ""
+    end
+  end
+
+  # Records install commands while retaining the formula's own control flow.
+  class Formula
+    [:desc, :homepage, :license, :head, :option, :depends_on, :skip_clean, :resource, :service, :post_install_steps,
+     :test].each do |name|
+      define_singleton_method(name) { |*_args| nil }
     end
 
-    def self.prefix
-      Pathname.new("/Applications/Xcode.app/Contents/Developer")
+    include FileUtils
+
+    attr_reader :commands
+
+    def initialize
+      @commands = []
     end
-  end
-end
 
-module Utils
-  def self.safe_popen_read(*args)
-    return "#{ENV.fetch('TEST_ROOT')}/prefix/libexec/site-packages\n" if args.include?("-c")
+    def buildpath
+      Pathname.new(ENV.fetch("TEST_ROOT")) / "source"
+    end
 
-    ""
-  end
-end
+    def prefix
+      Pathname.new(ENV.fetch("TEST_ROOT")) / "prefix"
+    end
 
-class Formula
-  def self.test(&block); end
+    def libexec
+      prefix / "libexec"
+    end
 
-  def self.method_missing(name, *args)
-    # Ignore Homebrew's declarative DSL; execute the formula's real methods.
-  end
+    def opt_prefix
+      prefix
+    end
 
-  include FileUtils
+    def bin
+      prefix / "bin"
+    end
 
-  attr_reader :commands
+    def build
+      self
+    end
 
-  def initialize
-    @commands = []
-  end
+    def with?(option)
+      ENV.fetch("TEST_OPTIONS", "").split(",").include?(option)
+    end
 
-  def buildpath
-    Pathname.new(ENV.fetch("TEST_ROOT")) / "source"
-  end
+    def odie(message)
+      raise message
+    end
 
-  def prefix
-    Pathname.new(ENV.fetch("TEST_ROOT")) / "prefix"
-  end
+    def compiler_available?(*args)
+      return false if ENV["TEST_COMPILER"] == "missing"
 
-  def libexec
-    prefix / "libexec"
-  end
+      args.first != "/usr/bin/env" || ENV["TEST_COMPILER"] != "fallback"
+    end
 
-  def opt_prefix
-    prefix
-  end
+    alias quiet_system compiler_available?
 
-  def bin
-    prefix / "bin"
-  end
+    def inreplace(path, old, replacement)
+      path.write(path.read.gsub(old, replacement))
+    end
 
-  def build
-    self
-  end
+    def system(*args)
+      @commands << args.map(&:to_s)
+      return if args[1..2] != ["-m", "venv"]
 
-  def with?(option)
-    ENV.fetch("TEST_OPTIONS", "").split(",").include?(option)
-  end
+      libexec.mkpath
+      site = libexec / "site-packages/cohere_melody"
+      site.mkpath
+      (site / "cohere_melody.so").write("")
+    end
 
-  def odie(message)
-    raise message
-  end
-
-  def quiet_system(*args)
-    return false if ENV["TEST_COMPILER"] == "missing"
-
-    args.first != "/usr/bin/env" || ENV["TEST_COMPILER"] != "fallback"
-  end
-
-  def inreplace(path, old, replacement)
-    path.write(path.read.gsub(old, replacement))
-  end
-
-  def system(*args)
-    @commands << args.map(&:to_s)
-    return unless args[1..2] == ["-m", "venv"]
-
-    libexec.mkpath
-    site = libexec / "site-packages/cohere_melody"
-    site.mkpath
-    (site / "cohere_melody.so").write("")
-  end
-
-  def resource(name)
-    root = Pathname.new(ENV.fetch("TEST_ROOT"))
-    Object.new.tap do |resource|
-      resource.define_singleton_method(:cached_download) { root / "model.whl" }
-      resource.define_singleton_method(:stage) do |&block|
-        Dir.chdir(root, &block)
+    def resource(_name)
+      root = Pathname.new(ENV.fetch("TEST_ROOT"))
+      Object.new.tap do |resource|
+        resource.define_singleton_method(:cached_download) { root / "model.whl" }
+        resource.define_singleton_method(:stage) do |&block|
+          Dir.chdir(root, &block)
+        end
       end
     end
   end
 end
+
+Object.class_eval do
+  include OmlxFormulaHarness::ObjectExtensions
+end
+Pathname.include(OmlxFormulaHarness::PathExtensions)
+Object.const_set(:MacOS, OmlxFormulaHarness::MacOS)
+Object.const_set(:Utils, OmlxFormulaHarness::Utils)
+Object.const_set(:Formula, OmlxFormulaHarness::Formula)
 
 if $PROGRAM_NAME == __FILE__
   class << Dir
-    def home(user = nil)
-      ENV.fetch("TEST_ROOT") + "/home"
+    def home(_user = nil)
+      "#{ENV.fetch("TEST_ROOT")}/home"
     end
   end
   load ARGV.fetch(0)
   formula = Omlx.new
   begin
     formula.public_send(ARGV.fetch(1, "install"))
-    puts JSON.generate(commands: formula.commands, path: ENV["PATH"],
-                       custom_kernel: ENV["OMLX_WITH_CUSTOM_KERNEL"],
-                       cmake_args: ENV["CMAKE_ARGS"],
-                       pip_index: ENV["PIP_INDEX_URL"],
-                       pip_find_links: ENV["PIP_FIND_LINKS"])
-  rescue StandardError => e
+    puts JSON.generate(commands: formula.commands, path: ENV.fetch("PATH", nil),
+                       custom_kernel: ENV.fetch("OMLX_WITH_CUSTOM_KERNEL", nil),
+                       cmake_args: ENV.fetch("CMAKE_ARGS", nil),
+                       pip_index: ENV.fetch("PIP_INDEX_URL", nil),
+                       pip_find_links: ENV.fetch("PIP_FIND_LINKS", nil))
+  rescue => e
     warn JSON.generate(error: e.message, commands: formula.commands)
     exit 1
   end
