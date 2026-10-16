@@ -177,6 +177,13 @@ class OmlxFormulaTest(unittest.TestCase):
             self.assertEqual(run.returncode, exit_code)
             self.assertEqual(run.stdout.splitlines(), ["-c", "file with space"])
 
+    def test_requested_options_install_with_mounted_fallback(self):
+        result, state = self.run_formula(compiler="fallback")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(state["custom_kernel"], "1")
+        metal = self.root / "source/homebrew-toolchain/metal"
+        self.assertEqual(metal.resolve(), self.metal.resolve())
+
     def test_shim_rejects_unsupported_metal_forms(self):
         result, _ = self.run_formula(method="setup_custom_kernels")
         self.assertEqual(result.returncode, 0, result.stderr)
