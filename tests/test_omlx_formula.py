@@ -145,6 +145,24 @@ class OmlxFormulaTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(state["pip_index"], "https://pip.example/simple/")
 
+    def test_homebrew_wheelhouse_survives_scrubbed_pip_environment(self):
+        wheelhouse = str(self.root / "verified-wheels")
+        result, state = self.run_formula(
+            HOMEBREW_PIP_FIND_LINKS=wheelhouse, PIP_FIND_LINKS="",
+            HOMEBREW_PIP_INDEX_URL="https://proxy.example/simple/",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(state["pip_find_links"], wheelhouse)
+        self.assertEqual(state["pip_index"], "https://proxy.example/simple/")
+
+    def test_homebrew_wheelhouse_takes_precedence_over_pip_environment(self):
+        result, state = self.run_formula(
+            HOMEBREW_PIP_FIND_LINKS="file:///verified/wheels",
+            PIP_FIND_LINKS="file:///different/wheels",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(state["pip_find_links"], "file:///verified/wheels")
+
     def test_fallback_shim_routes_metal_and_propagates_failure(self):
         result, _ = self.run_formula(method="setup_custom_kernels",
                                      compiler="fallback")
@@ -158,6 +176,13 @@ class OmlxFormulaTest(unittest.TestCase):
             )
             self.assertEqual(run.returncode, exit_code)
             self.assertEqual(run.stdout.splitlines(), ["-c", "file with space"])
+
+    def test_requested_options_install_with_mounted_fallback(self):
+        result, state = self.run_formula(compiler="fallback")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(state["custom_kernel"], "1")
+        metal = self.root / "source/homebrew-toolchain/metal"
+        self.assertEqual(metal.resolve(), self.metal.resolve())
 
     def test_shim_rejects_unsupported_metal_forms(self):
         result, _ = self.run_formula(method="setup_custom_kernels")

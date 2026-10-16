@@ -66,6 +66,8 @@ class Omlx < Formula
     # Homebrew disables user pip configuration inside formula builds. Forward
     # its supported package-index setting to pip and build-isolation subprocesses.
     ENV["PIP_INDEX_URL"] = ENV["HOMEBREW_PIP_INDEX_URL"] if ENV["HOMEBREW_PIP_INDEX_URL"].present?
+    # Homebrew's entry-point environment scrub removes ordinary PIP_* variables.
+    ENV["PIP_FIND_LINKS"] = ENV["HOMEBREW_PIP_FIND_LINKS"] if ENV["HOMEBREW_PIP_FIND_LINKS"].present?
 
     setup_custom_kernels if build.with?("custom-kernel")
 
