@@ -71,6 +71,8 @@ class Omlx < Formula
 
     setup_custom_kernels if build.with?("custom-kernel")
 
+    setup_custom_kernels if build.with?("custom-kernel")
+
     # Create venv with pip so dependency resolution works properly.
     system "python3.11", "-m", "venv", libexec
 
