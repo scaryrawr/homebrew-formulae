@@ -47,9 +47,13 @@ The installer uses pip, not uv. Set `HOMEBREW_PIP_INDEX_URL` to select a package
 index for the formula and its isolated builds; `UV_DEFAULT_INDEX` alone does not
 configure pip. The selected feed must contain the exact MLX and native ABI
 dependencies pinned by the fork.
-Alternatively, a scoped `PIP_FIND_LINKS=/absolute/path/to/wheelhouse` can supply
-verified, compatible wheels at those exact versions, including to pip's isolated
-builds, without changing the index for other dependencies.
+Alternatively, this formula accepts a scoped
+`HOMEBREW_PIP_FIND_LINKS=/absolute/path/to/wheelhouse` to supply verified,
+compatible wheels at those exact versions, including to pip's isolated builds,
+without changing the index for other dependencies. Homebrew removes ordinary
+`PIP_FIND_LINKS` from its entry-point environment; the formula explicitly forwards
+the Homebrew-prefixed setting to pip. This setting takes precedence over any
+inherited `PIP_FIND_LINKS`.
 
 Run the install-stage and toolchain regression fixtures with
 `python3 -m unittest discover -s tests`. The fixtures do not install a formula or
