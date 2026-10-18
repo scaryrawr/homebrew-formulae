@@ -36,7 +36,8 @@ without `--HEAD`; Homebrew preserves the installed build options. If virtualenv
 creation fails before pip runs, verify the Homebrew Python executable works and
 repair an incomplete Python installation with `brew reinstall python@3.11`.
 
-`omlx --with-custom-kernel` builds all five native kernel packages using MLX's
+`omlx --with-custom-kernel` builds the four consolidated native kernel packages
+(`attention`, `lowbit`, `quant_matmul`, and `sparse_index`) using MLX's
 `MetalExtension` builder, which generates its own CMake files. It requires Xcode
 and a usable Metal compiler; the formula preserves support for an already mounted
 Metal toolchain when Xcode's `xcrun` cannot invoke it. Compiler routing is local to
