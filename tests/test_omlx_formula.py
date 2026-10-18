@@ -13,11 +13,10 @@ ROOT = Path(__file__).resolve().parents[1]
 FORMULA = ROOT / "Formula/omlx.rb"
 HARNESS = ROOT / "tests/omlx_formula_harness.rb"
 KERNELS = {
-    "bonsai": "omlx_bonsai_kernels",
-    "decode_fast": "omlx_decode_fast_kernels",
-    "glm_moe_dsa": "omlx_glm_kernels",
-    "minimax_m3": "omlx_minimax_m3_kernels",
-    "qwen35_prefill": "omlx_qwen35_prefill_kernels",
+    "attention": "omlx_attention_kernels",
+    "lowbit": "omlx_lowbit_kernels",
+    "quant_matmul": "omlx_quant_matmul_kernels",
+    "sparse_index": "omlx_sparse_index_kernels",
 }
 
 
@@ -80,6 +79,11 @@ class OmlxFormulaTest(unittest.TestCase):
             (self.root / "prefix/libexec/post-install-fixups").read_text(),
             "grammar\ncustom-kernel",
         )
+        self.assertEqual(
+            (self.root / "prefix/libexec/post-install-custom-kernels")
+            .read_text().splitlines(),
+            list(KERNELS),
+        )
         shim = self.root / "source/homebrew-toolchain/xcrun"
         self.assertTrue(shim.is_file())
         self.assertEqual(state["path"].split(os.pathsep)[0], str(shim.parent))
@@ -98,7 +102,7 @@ class OmlxFormulaTest(unittest.TestCase):
                 moved.rename(source)
 
     def test_missing_metal_sources_fail_explicitly(self):
-        source = self.root / "source/omlx/custom_kernels/bonsai/csrc"
+        source = self.root / "source/omlx/custom_kernels/attention/csrc"
         (source / "kernels.metal").unlink()
         result, state = self.run_formula()
         self.assertNotEqual(result.returncode, 0)
@@ -278,7 +282,7 @@ class OmlxFormulaTest(unittest.TestCase):
             self.assertEqual(run.returncode, 0, run.stderr)
         self.assertGreater(metallib.stat().st_size, 0)
 
-    def test_all_five_native_checks_require_metallib_and_abi(self):
+    def test_all_native_checks_require_metallib_and_abi(self):
         result, state = self.run_formula()
         self.assertEqual(result.returncode, 0, result.stderr)
         code = state["commands"][2][-1]

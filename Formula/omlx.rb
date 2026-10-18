@@ -1,5 +1,5 @@
 class Omlx < Formula
-  CUSTOM_KERNELS = %w[bonsai decode_fast glm_moe_dsa minimax_m3 qwen35_prefill].freeze
+  CUSTOM_KERNELS = %w[attention lowbit quant_matmul sparse_index].freeze
 
   desc "LLM inference server optimized for Apple Silicon"
   homepage "https://github.com/scaryrawr/omlx"
@@ -331,11 +331,10 @@ class Omlx < Formula
       from pathlib import Path
 
       libraries = {
-          "bonsai": "omlx_bonsai_kernels",
-          "decode_fast": "omlx_decode_fast_kernels",
-          "glm_moe_dsa": "omlx_glm_kernels",
-          "minimax_m3": "omlx_minimax_m3_kernels",
-          "qwen35_prefill": "omlx_qwen35_prefill_kernels",
+          "attention": "omlx_attention_kernels",
+          "lowbit": "omlx_lowbit_kernels",
+          "quant_matmul": "omlx_quant_matmul_kernels",
+          "sparse_index": "omlx_sparse_index_kernels",
       }
       failed = {}
       for package in #{CUSTOM_KERNELS.inspect}:
