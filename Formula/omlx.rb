@@ -24,8 +24,8 @@ class Omlx < Formula
 
   # Fetch source separately so the optional audio install stays pinned.
   resource "mlx-audio" do
-    url "https://github.com/Blaizzy/mlx-audio/archive/94c7716212b2228f178d2f9c7619a591fd1b0b78.tar.gz"
-    sha256 "7150ba2e58b791399d7aefb81f15d206bd1aa018aa99861f90583cf3d58fd507"
+    url "https://github.com/Blaizzy/mlx-audio/archive/8c244a1faff44cfa69e3151c195f52a4c1c90be5.tar.gz"
+    sha256 "2762c841099be428cd2102ad40e2e7dbcde838adb4121d9d5c9294636dd98661"
   end
 
   # Kokoro's English G2P path uses misaki + spaCy. Bundle the spaCy
