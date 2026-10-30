@@ -22,12 +22,6 @@ class Omlx < Formula
   # (llvm/llvm-project#203678).
   skip_clean "libexec"
 
-  # Fetch source separately so the optional audio install stays pinned.
-  resource "mlx-audio" do
-    url "https://github.com/Blaizzy/mlx-audio/archive/8c244a1faff44cfa69e3151c195f52a4c1c90be5.tar.gz"
-    sha256 "2762c841099be428cd2102ad40e2e7dbcde838adb4121d9d5c9294636dd98661"
-  end
-
   # Kokoro's English G2P path uses misaki + spaCy. Bundle the spaCy
   # language model so the first TTS request does not download at runtime.
   resource "en-core-web-sm" do
@@ -105,10 +99,9 @@ class Omlx < Formula
       end
     end
 
-    # Install mlx-audio from the pinned source revision.
     if build.with?("audio")
-      # Mirror the fork's bundle dependency set and install mlx-audio itself
-      # without deps so it cannot replace oMLX's pinned engine stack.
+      # Core already installs the fork's pinned mlx-audio. Add optional audio
+      # dependencies without replacing it with a separately maintained pin.
       system libexec/"bin/pip", "install",
              "scipy>=1.11.0",
              "librosa>=0.10.0",
@@ -126,10 +119,6 @@ class Omlx < Formula
              "setuptools<81",
              "mistral-common[audio]>=1.10",
              "wsproto==1.2.0"
-      resource("mlx-audio").stage do
-        system libexec/"bin/pip", "install", "--no-deps", "."
-      end
-
       spacy_model_wheel = buildpath/"en_core_web_sm-3.8.0-py3-none-any.whl"
       cp resource("en-core-web-sm").cached_download, spacy_model_wheel
       system libexec/"bin/pip", "install", "--no-deps", spacy_model_wheel
@@ -352,6 +341,7 @@ class Omlx < Formula
     assert_match "serve", shell_output("#{bin}/omlx --help")
     system libexec/"bin/python", "-c", "import sys; assert sys.version_info[:2] == (3, 11)"
     system libexec/"bin/python", "-c", "import importlib.metadata; importlib.metadata.version('omlx')"
+    system libexec/"bin/pip", "check"
     if build.with?("audio")
       system libexec/"bin/python", "-c", "from misaki import en; import spacy; spacy.load('en_core_web_sm')"
     end
