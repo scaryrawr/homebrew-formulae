@@ -31,6 +31,11 @@ macOS runners with `--with-audio`, including when a PR also changes stable
 formulae. The formula uses Python 3.11 because Misaki, required for audio, does
 not support Python 3.13.
 
+The fork's core dependencies own the `mlx-audio` source pin, including the version
+required by `mlx-vlm`. `--with-audio` adds the optional audio dependencies and
+bundled spaCy model without reinstalling `mlx-audio` from a separate formula pin.
+Both installation and `brew test` run `pip check` to detect dependency conflicts.
+
 To reinstall head-only `omlx`, use `brew reinstall scaryrawr/formulae/omlx`
 without `--HEAD`; Homebrew preserves the installed build options. If virtualenv
 creation fails before pip runs, verify the Homebrew Python executable works and

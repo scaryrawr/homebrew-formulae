@@ -71,7 +71,10 @@ class OmlxFormulaTest(unittest.TestCase):
             str(self.root / "source") + "[grammar]",
         ])
         self.assertIn("misaki>=0.9.4", commands[3])
-        self.assertEqual(commands[4][-3:], ["install", "--no-deps", "."])
+        self.assertEqual(commands[4][-3:], [
+            "install", "--no-deps",
+            str(self.root / "source/en_core_web_sm-3.8.0-py3-none-any.whl"),
+        ])
         self.assertIn(
             [str(self.root / "prefix/libexec/bin/pip"), "check"], commands,
         )
@@ -87,6 +90,23 @@ class OmlxFormulaTest(unittest.TestCase):
         shim = self.root / "source/homebrew-toolchain/xcrun"
         self.assertTrue(shim.is_file())
         self.assertEqual(state["path"].split(os.pathsep)[0], str(shim.parent))
+
+    def test_audio_does_not_replace_core_mlx_audio_pin(self):
+        result, state = self.run_formula(options="audio")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        pip = str(self.root / "prefix/libexec/bin/pip")
+        installs = [
+            command for command in state["commands"]
+            if command[:2] == [pip, "install"]
+        ]
+        self.assertEqual(len(installs), 3)
+        self.assertEqual(installs[0], [pip, "install", str(self.root / "source")])
+        self.assertIn("misaki>=0.9.4", installs[1])
+        self.assertEqual(installs[2][-1], str(
+            self.root / "source/en_core_web_sm-3.8.0-py3-none-any.whl",
+        ))
+        self.assertNotIn('resource "mlx-audio"', FORMULA.read_text())
+        self.assertIn([pip, "check"], state["commands"])
 
     def test_absent_and_moved_required_kernels_fail_before_venv(self):
         for kernel in KERNELS:
