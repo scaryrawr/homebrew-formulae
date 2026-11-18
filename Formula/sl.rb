@@ -1,8 +1,8 @@
 class Sl < Formula
   desc "Prints a steam locomotive if you type sl instead of ls"
   homepage "https://github.com/scaryrawr/sl"
-  url "https://github.com/scaryrawr/sl/archive/refs/tags/sl-6.15-3.tar.gz"
-  sha256 "4cbc40ece0c88035a73a024efc07adf9269074eab387672d74b1db6c1afcb162"
+  url "https://github.com/scaryrawr/sl/archive/refs/tags/sl-6.16-1.tar.gz"
+  sha256 "affba61cb044aba84e297c00b2cb34950f234bade93f2f2bb5b03bb3257ddd9b"
   license "MIT"
   head "https://github.com/scaryrawr/sl.git", branch: "main"
 
