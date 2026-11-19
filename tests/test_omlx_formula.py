@@ -135,6 +135,15 @@ class OmlxFormulaTest(unittest.TestCase):
         self.assertIn("Metal compiler not found", state["error"])
         self.assertEqual(state["commands"], [])
 
+    def test_native_compiler_does_not_depend_on_homebrew_quiet_system(self):
+        result, _ = self.run_formula(
+            method="setup_custom_kernels", compiler="helper-failure",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        metal = self.root / "source/homebrew-toolchain/metal"
+        self.assertFalse(metal.is_symlink())
+        self.assertIn("/usr/bin/xcrun", metal.read_text())
+
     def test_missing_xcode_fails_before_venv(self):
         result, state = self.run_formula(TEST_XCODE="missing")
         self.assertNotEqual(result.returncode, 0)

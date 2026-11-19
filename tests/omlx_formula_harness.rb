@@ -115,7 +115,7 @@ module OmlxFormulaHarness
     end
 
     def compiler_available?(*args)
-      return false if ENV["TEST_COMPILER"] == "missing"
+      return false if %w[missing helper-failure].include?(ENV["TEST_COMPILER"])
 
       args.first != "/usr/bin/env" || ENV["TEST_COMPILER"] != "fallback"
     end
@@ -155,6 +155,11 @@ Pathname.include(OmlxFormulaHarness::PathExtensions)
 Object.const_set(:MacOS, OmlxFormulaHarness::MacOS)
 Object.const_set(:Utils, OmlxFormulaHarness::Utils)
 Object.const_set(:Formula, OmlxFormulaHarness::Formula)
+Kernel.define_singleton_method(:system) do |*args, **_options|
+  next false if ENV["TEST_COMPILER"] == "missing"
+
+  args.first != "/usr/bin/env" || ENV["TEST_COMPILER"] != "fallback"
+end
 
 if $PROGRAM_NAME == __FILE__
   class << Dir

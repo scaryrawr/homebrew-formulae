@@ -260,8 +260,8 @@ class Omlx < Formula
     toolchain_bin = buildpath/"homebrew-toolchain"
     toolchain_bin.mkpath
     metal_compiler = toolchain_bin/"metal"
-    if quiet_system "/usr/bin/env", "DEVELOPER_DIR=#{developer_dir}",
-                    "/usr/bin/xcrun", "-sdk", "macosx", "metal", "-help"
+    if Kernel.system("/usr/bin/env", "DEVELOPER_DIR=#{developer_dir}",
+                     "/usr/bin/xcrun", "-sdk", "macosx", "metal", "-help", out: File::NULL)
       metal_compiler.write <<~SH
         #!/bin/sh
         exec /usr/bin/env #{("DEVELOPER_DIR=" + developer_dir.to_s).shellescape} /usr/bin/xcrun -sdk macosx metal "$@"
