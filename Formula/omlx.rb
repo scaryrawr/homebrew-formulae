@@ -63,7 +63,61 @@ class Omlx < Formula
     # Homebrew's entry-point environment scrub removes ordinary PIP_* variables.
     ENV["PIP_FIND_LINKS"] = ENV["HOMEBREW_PIP_FIND_LINKS"] if ENV["HOMEBREW_PIP_FIND_LINKS"].present?
 
-    setup_custom_kernels if build.with?("custom-kernel")
+    if build.with?("custom-kernel")
+      CUSTOM_KERNELS.each do |kernel|
+        source = buildpath/"omlx/custom_kernels/#{kernel}/csrc"
+        odie "--with-custom-kernel requires #{source}/bindings.cpp" unless (source/"bindings.cpp").file?
+        odie "--with-custom-kernel requires Metal sources in #{source}" if source.glob("*.metal").empty?
+      end
+
+      odie "--with-custom-kernel requires full Xcode with the Metal toolchain" unless MacOS::Xcode.installed?
+
+      developer_dir = MacOS::Xcode.prefix
+      toolchain_bin = buildpath/"homebrew-toolchain"
+      toolchain_bin.mkpath
+      metal_compiler = toolchain_bin/"metal"
+      if Kernel.system("/usr/bin/env", "DEVELOPER_DIR=#{developer_dir}",
+                       "/usr/bin/xcrun", "-sdk", "macosx", "metal", "-help", out: File::NULL)
+        metal_compiler.write <<~SH
+          #!/bin/sh
+          exec /usr/bin/env #{("DEVELOPER_DIR=" + developer_dir.to_s).shellescape} /usr/bin/xcrun -sdk macosx metal "$@"
+        SH
+        chmod 0755, metal_compiler
+      else
+        # Preserve the mounted Metal toolchain fallback when Xcode's xcrun
+        # cannot invoke Metal (for example, after an Xcode update).
+        user_home = Dir.home(ENV.fetch("USER"))
+        metal = Dir[
+          "#{user_home}/Library/Developer/DVTDownloads/MetalToolchain/" \
+          "mounts/*/Metal.xctoolchain/usr/bin/metal",
+        ].select { |candidate| quiet_system candidate, "-help" }.max_by do |candidate|
+          File.mtime(candidate)
+        end
+        odie "Metal compiler not found; install the Metal toolchain in Xcode Settings > Components" if metal.blank?
+
+        ln_s metal, metal_compiler
+      end
+
+      # MLX MetalExtension generates its own CMake files and invokes xcrun
+      # by name; adapt only this build instead of patching MLX or its sources.
+      (toolchain_bin/"xcrun").write <<~SH
+        #!/bin/sh
+        if [ "$#" -ge 3 ] && [ "$1" = "-sdk" ] && [ "$2" = "macosx" ] && [ "$3" = "metal" ]; then
+          shift 3
+          exec #{metal_compiler.to_s.shellescape} "$@"
+        fi
+        for arg do
+          if [ "$arg" = "metal" ]; then
+            echo "Unsupported oMLX build xcrun Metal invocation: $*" >&2
+            exit 64
+          fi
+        done
+        exec /usr/bin/env #{("DEVELOPER_DIR=" + developer_dir.to_s).shellescape} /usr/bin/xcrun "$@"
+      SH
+      chmod 0755, toolchain_bin/"xcrun"
+      ENV.prepend_path "PATH", toolchain_bin
+      ENV["OMLX_WITH_CUSTOM_KERNEL"] = "1"
+    end
 
     # Create venv with pip so dependency resolution works properly.
     system "python3.11", "-m", "venv", libexec
@@ -245,62 +299,6 @@ class Omlx < Formula
     PYTHON
 
     bin.install_symlink libexec/"bin/omlx"
-  end
-
-  def setup_custom_kernels
-    CUSTOM_KERNELS.each do |kernel|
-      source = buildpath/"omlx/custom_kernels/#{kernel}/csrc"
-      odie "--with-custom-kernel requires #{source}/bindings.cpp" unless (source/"bindings.cpp").file?
-      odie "--with-custom-kernel requires Metal sources in #{source}" if source.glob("*.metal").empty?
-    end
-
-    odie "--with-custom-kernel requires full Xcode with the Metal toolchain" unless MacOS::Xcode.installed?
-
-    developer_dir = MacOS::Xcode.prefix
-    toolchain_bin = buildpath/"homebrew-toolchain"
-    toolchain_bin.mkpath
-    metal_compiler = toolchain_bin/"metal"
-    if Kernel.system("/usr/bin/env", "DEVELOPER_DIR=#{developer_dir}",
-                     "/usr/bin/xcrun", "-sdk", "macosx", "metal", "-help", out: File::NULL)
-      metal_compiler.write <<~SH
-        #!/bin/sh
-        exec /usr/bin/env #{("DEVELOPER_DIR=" + developer_dir.to_s).shellescape} /usr/bin/xcrun -sdk macosx metal "$@"
-      SH
-      chmod 0755, metal_compiler
-    else
-      # Preserve the mounted Metal toolchain fallback when Xcode's xcrun
-      # cannot invoke Metal (for example, after an Xcode update).
-      user_home = Dir.home(ENV.fetch("USER"))
-      metal = Dir[
-        "#{user_home}/Library/Developer/DVTDownloads/MetalToolchain/" \
-        "mounts/*/Metal.xctoolchain/usr/bin/metal",
-      ].select { |candidate| quiet_system candidate, "-help" }.max_by do |candidate|
-        File.mtime(candidate)
-      end
-      odie "Metal compiler not found; install the Metal toolchain in Xcode Settings > Components" if metal.blank?
-
-      ln_s metal, metal_compiler
-    end
-
-    # MLX MetalExtension generates its own CMake files and invokes xcrun
-    # by name; adapt only this build instead of patching MLX or its sources.
-    (toolchain_bin/"xcrun").write <<~SH
-      #!/bin/sh
-      if [ "$#" -ge 3 ] && [ "$1" = "-sdk" ] && [ "$2" = "macosx" ] && [ "$3" = "metal" ]; then
-        shift 3
-        exec #{metal_compiler.to_s.shellescape} "$@"
-      fi
-      for arg do
-        if [ "$arg" = "metal" ]; then
-          echo "Unsupported oMLX build xcrun Metal invocation: $*" >&2
-          exit 64
-        fi
-      done
-      exec /usr/bin/env #{("DEVELOPER_DIR=" + developer_dir.to_s).shellescape} /usr/bin/xcrun "$@"
-    SH
-    chmod 0755, toolchain_bin/"xcrun"
-    ENV.prepend_path "PATH", toolchain_bin
-    ENV["OMLX_WITH_CUSTOM_KERNEL"] = "1"
   end
 
   # These fixups must run after Homebrew's cleaning pass rewrites Mach-O

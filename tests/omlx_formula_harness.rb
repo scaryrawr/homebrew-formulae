@@ -170,7 +170,7 @@ if $PROGRAM_NAME == __FILE__
   load ARGV.fetch(0)
   formula = Omlx.new
   begin
-    formula.public_send(ARGV.fetch(1, "install"))
+    formula.install
     puts JSON.generate(commands: formula.commands, path: ENV.fetch("PATH", nil),
                        custom_kernel: ENV.fetch("OMLX_WITH_CUSTOM_KERNEL", nil),
                        cmake_args: ENV.fetch("CMAKE_ARGS", nil),

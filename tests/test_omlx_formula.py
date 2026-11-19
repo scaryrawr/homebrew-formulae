@@ -41,7 +41,7 @@ class OmlxFormulaTest(unittest.TestCase):
         )
         self.metal.chmod(0o755)
 
-    def run_formula(self, method="install", options="grammar,audio,custom-kernel",
+    def run_formula(self, options="grammar,audio,custom-kernel",
                     compiler="native", formula=FORMULA, **extra_env):
         env = {
             **os.environ,
@@ -53,7 +53,7 @@ class OmlxFormulaTest(unittest.TestCase):
             **extra_env,
         }
         result = subprocess.run(
-            ["ruby", str(HARNESS), str(formula), method],
+            ["ruby", str(HARNESS), str(formula)],
             env=env, capture_output=True, text=True,
         )
         output = result.stdout if result.returncode == 0 else result.stderr
@@ -136,9 +136,7 @@ class OmlxFormulaTest(unittest.TestCase):
         self.assertEqual(state["commands"], [])
 
     def test_native_compiler_does_not_depend_on_homebrew_quiet_system(self):
-        result, _ = self.run_formula(
-            method="setup_custom_kernels", compiler="helper-failure",
-        )
+        result, _ = self.run_formula(compiler="helper-failure")
         self.assertEqual(result.returncode, 0, result.stderr)
         metal = self.root / "source/homebrew-toolchain/metal"
         self.assertFalse(metal.is_symlink())
@@ -197,8 +195,7 @@ class OmlxFormulaTest(unittest.TestCase):
         self.assertEqual(state["pip_find_links"], "file:///verified/wheels")
 
     def test_fallback_shim_routes_metal_and_propagates_failure(self):
-        result, _ = self.run_formula(method="setup_custom_kernels",
-                                     compiler="fallback")
+        result, _ = self.run_formula(compiler="fallback")
         self.assertEqual(result.returncode, 0, result.stderr)
         shim = self.root / "source/homebrew-toolchain/xcrun"
         for exit_code in (0, 23):
@@ -218,7 +215,7 @@ class OmlxFormulaTest(unittest.TestCase):
         self.assertEqual(metal.resolve(), self.metal.resolve())
 
     def test_shim_rejects_unsupported_metal_forms(self):
-        result, _ = self.run_formula(method="setup_custom_kernels")
+        result, _ = self.run_formula()
         self.assertEqual(result.returncode, 0, result.stderr)
         shim = self.root / "source/homebrew-toolchain/xcrun"
         for args in (["metal", "-help"], ["--find", "metal"],
@@ -240,9 +237,7 @@ class OmlxFormulaTest(unittest.TestCase):
 
     def test_harness_accepts_renamed_xcode_without_installing_it(self):
         developer_dir = "/Applications/Xcode Custom.app/Contents/Developer"
-        result, _ = self.run_formula(
-            method="setup_custom_kernels", TEST_DEVELOPER_DIR=developer_dir,
-        )
+        result, _ = self.run_formula(TEST_DEVELOPER_DIR=developer_dir)
         self.assertEqual(result.returncode, 0, result.stderr)
         metal = self.root / "source/homebrew-toolchain/metal"
         command = shlex.split(metal.read_text().splitlines()[1])
@@ -253,7 +248,6 @@ class OmlxFormulaTest(unittest.TestCase):
             self.skipTest("requires the macOS xcrun tool")
         env = self.selected_developer_environment()
         result, _ = self.run_formula(
-            method="setup_custom_kernels",
             TEST_DEVELOPER_DIR=env["DEVELOPER_DIR"],
             DEVELOPER_DIR=env["DEVELOPER_DIR"],
         )
@@ -288,7 +282,6 @@ class OmlxFormulaTest(unittest.TestCase):
         if probe.returncode:
             self.skipTest("Metal compiler is not installed")
         result, _ = self.run_formula(
-            method="setup_custom_kernels",
             TEST_DEVELOPER_DIR=env["DEVELOPER_DIR"],
             DEVELOPER_DIR=env["DEVELOPER_DIR"],
         )
