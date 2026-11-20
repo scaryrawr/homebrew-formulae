@@ -1,5 +1,5 @@
 class Omlx < Formula
-  CUSTOM_KERNELS = %w[attention lowbit quant_matmul sparse_index].freeze
+  CUSTOM_KERNELS = %w[attention lowbit oqh quant_matmul sparse_index].freeze
 
   desc "LLM inference server optimized for Apple Silicon"
   homepage "https://github.com/scaryrawr/omlx"
@@ -318,6 +318,7 @@ class Omlx < Formula
       libraries = {
           "attention": "omlx_attention_kernels",
           "lowbit": "omlx_lowbit_kernels",
+          "oqh": "omlx_oqh_kernels",
           "quant_matmul": "omlx_quant_matmul_kernels",
           "sparse_index": "omlx_sparse_index_kernels",
       }
