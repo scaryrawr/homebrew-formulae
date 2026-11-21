@@ -15,6 +15,7 @@ HARNESS = ROOT / "tests/omlx_formula_harness.rb"
 KERNELS = {
     "attention": "omlx_attention_kernels",
     "lowbit": "omlx_lowbit_kernels",
+    "oqh": "omlx_oqh_kernels",
     "quant_matmul": "omlx_quant_matmul_kernels",
     "sparse_index": "omlx_sparse_index_kernels",
 }
